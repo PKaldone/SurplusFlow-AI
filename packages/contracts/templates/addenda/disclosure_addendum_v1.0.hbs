@@ -1,0 +1,121 @@
+<!-- Disclosure Addendum v1.0 — Generic Template -->
+<!-- Template Key: disclosure_addendum | Version: v1.0 -->
+
+<div class="addendum" style="font-family: 'Times New Roman', serif; max-width: 8.5in; margin: 0 auto; padding: 1in; line-height: 1.6;">
+
+<h1 style="text-align: center; font-size: 16pt;">DISCLOSURE ADDENDUM</h1>
+<p style="text-align: center; font-size: 10pt; color: #555;">
+Addendum to Surplus Recovery Service Agreement No: {{caseNumber}}<br>
+Effective Date: {{formatDate effectiveDate}}
+</p>
+
+<hr style="margin: 20px 0;">
+
+<p>This Disclosure Addendum is attached to and made a part of the Surplus Recovery Service Agreement ("Agreement") between <strong>{{companyName}}</strong> ("Company") and <strong>{{claimantFullName}}</strong> ("Claimant"), dated {{formatDate effectiveDate}}.</p>
+
+<p><strong>The Claimant acknowledges and understands the following:</strong></p>
+
+<h2>1. FEE DISCLOSURE</h2>
+
+<p>The Company will charge a success-based fee of <strong>{{feePercent}}%</strong> of the total funds actually recovered and received by the Claimant.{{#if feeCap}} The maximum fee shall not exceed <strong>{{feeCap}}</strong>, regardless of the amount recovered.{{/if}}</p>
+
+<p>No fee will be charged unless recovery is successful. The Claimant will not be charged any upfront, retainer, or administrative fees.</p>
+
+<h2>2. RIGHT TO FILE INDEPENDENTLY</h2>
+
+<p><strong>IMPORTANT: You are not required to hire a recovery service to claim these funds.</strong> You may file a claim yourself, at no cost, directly with the applicable government agency or court.</p>
+
+{{#if freeFilingUrl}}
+<p>You can learn more about filing your own claim at: <strong>{{freeFilingUrl}}</strong></p>
+{{/if}}
+
+<p>By signing this Agreement, you are choosing to engage the Company to handle the recovery process on your behalf in exchange for the Success Fee described above.</p>
+
+<h2>3. NO LEGAL ADVICE OR REPRESENTATION</h2>
+
+<p>The Company is <strong>NOT</strong> a law firm, and no employee or representative of the Company is acting as your attorney. The Company does not provide legal advice. This Agreement does not create an attorney-client relationship of any kind.</p>
+
+<p>If legal representation or advice is required for your claim (for example, if a court motion must be filed), the Company will notify you and recommend that you consult with an independent attorney. The Company may coordinate with a licensed attorney on your behalf, but only with your written consent.</p>
+
+<h2>4. FUNDS PAID DIRECTLY TO CLAIMANT</h2>
+
+<p>Recovered funds will be paid <strong>directly to you</strong> by the government agency, court, or other holding entity. The Company does not receive, hold, or handle the recovered funds on your behalf.</p>
+
+<p>After you confirm receipt of the recovered funds, the Company will invoice you for the Success Fee as described in the Agreement.</p>
+
+<h2>5. RESCISSION / COOLING-OFF PERIOD</h2>
+
+{{#ifTrue coolingOffDays}}
+<p>You have the right to <strong>cancel this Agreement within {{coolingOffDays}} calendar days</strong> of signing without penalty. To exercise this right, send written notice to the Company at:</p>
+
+<p style="padding-left: 20px;">
+{{companyName}}<br>
+{{companyAddress}}<br>
+Email: {{companyEmail}}<br>
+Phone: {{companyPhone}}
+</p>
+
+<p>Your rescission deadline is: <strong>{{formatDate rescissionDeadline}}</strong></p>
+{{else}}
+<p>You may cancel this Agreement at any time with thirty (30) days' written notice, as described in the Agreement. Please refer to the terms of the Agreement regarding any fees that may apply if a claim has already been submitted.</p>
+{{/ifTrue}}
+
+<h2>6. PRIVACY AND DATA SECURITY</h2>
+
+<p>The Company takes the privacy and security of your personal information seriously. All documents and personal data you provide will be:</p>
+
+<p style="padding-left: 20px;">
+• Encrypted during transmission and while stored<br>
+• Accessible only to authorized personnel directly involved in your claim<br>
+• Used solely for the purpose of processing your recovery claim<br>
+• Never sold to or shared with third parties for marketing purposes<br>
+• Retained only as long as required by law and then securely destroyed
+</p>
+
+<p>You may request to review, update, or delete your personal information at any time by contacting the Company.</p>
+
+<h2>7. NO GUARANTEE OF RECOVERY</h2>
+
+<p>The Company will use commercially reasonable efforts to process your claim, but <strong>does not guarantee</strong> that your claim will be approved or that any funds will be recovered. The final decision on your claim is made by the applicable government agency, court, or custodial entity.</p>
+
+{{#ifTrue requiredDisclosures.length}}
+<h2>8. JURISDICTION-SPECIFIC DISCLOSURES</h2>
+
+<p>The following additional disclosures are required in your jurisdiction ({{jurisdictionState}}{{#if jurisdictionCounty}}, {{jurisdictionCounty}} County{{/if}}):</p>
+
+{{#eachDisclosure requiredDisclosures}}
+{{#ifEquals disclosure "county_specific_notice"}}
+<p style="padding-left: 20px; border-left: 3px solid #cc0000;">
+<strong>County-Specific Notice:</strong> Additional local requirements may apply to surplus recovery services in your county. Please contact your local clerk of court or county administrator for more information. REQUIRES LEGAL VERIFICATION — this notice is a placeholder for county-specific requirements.
+</p>
+{{/ifEquals}}
+{{/eachDisclosure}}
+{{/ifTrue}}
+
+<hr style="margin: 30px 0;">
+
+<h2>CLAIMANT ACKNOWLEDGMENT</h2>
+
+<p>By signing below, I acknowledge that I have read and understand each of the disclosures in this Addendum. I confirm that I am entering into the Surplus Recovery Service Agreement voluntarily and with full understanding of the fee structure, my right to file independently, the nature of the services provided, and my right to cancel.</p>
+
+<br><br>
+
+<table style="width: 100%; margin-top: 20px;">
+<tr>
+<td style="width: 60%; vertical-align: top;">
+<p>___________________________________</p>
+<p><strong>{{claimantFullName}}</strong></p>
+<p>Signature</p>
+</td>
+<td style="width: 40%; vertical-align: top;">
+<p>___________________________________</p>
+<p>Date</p>
+</td>
+</tr>
+</table>
+
+<p style="text-align: center; font-size: 9pt; color: #777; margin-top: 40px;">
+Disclosure Addendum — Agreement No: {{caseNumber}} &nbsp;|&nbsp; Version: v1.0
+</p>
+
+</div>

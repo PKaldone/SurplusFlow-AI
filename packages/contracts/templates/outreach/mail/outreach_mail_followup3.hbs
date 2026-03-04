@@ -1,0 +1,37 @@
+{{!-- Follow-up Mail Touch 3 (Final) --}}
+{{!-- Template Key: outreach_mail_followup3 | Touch: 3 --}}
+{{!-- Sent 21 days after Touch 2 if no response. FINAL contact. --}}
+
+<div class="outreach-letter" style="font-family: 'Times New Roman', serif; max-width: 8.5in; margin: 0 auto; padding: 1in; line-height: 1.6; font-size: 12pt;">
+
+<p style="text-align: right;">
+{{companyName}}<br>
+{{companyAddress}}<br>
+{{todayDate}}
+</p>
+
+<p>
+{{claimantFullName}}<br>
+{{#if claimantAddress}}{{claimantAddress}}<br>{{/if}}
+{{#if claimantCity}}{{claimantCity}}, {{claimantState}} {{claimantZip}}{{/if}}
+</p>
+
+<p>Re: Final Notice — Potential Unclaimed Funds — Reference {{caseNumber}}</p>
+
+<p>Dear {{claimantFirstName}},</p>
+
+<p>This is our final communication regarding potential unclaimed funds (~{{reportedAmount}}) that may belong to you. We have contacted you twice previously and have not received a response.</p>
+
+<p><strong>We will not contact you again after this notice</strong> unless you reach out to us.</p>
+
+<p>If you wish to pursue this claim in the future — either on your own or with our assistance — you can contact us at {{companyPhone}} or {{companyEmail}} and reference <strong>{{caseNumber}}</strong>.{{#if freeFilingUrl}} You can also file directly at {{freeFilingUrl}}.{{/if}}</p>
+
+<p>We wish you the best.</p>
+
+<p>Sincerely,<br>{{companyName}}</p>
+
+<p style="font-size: 9pt; color: #777; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px;">
+Final notice from {{companyName}}. Not affiliated with any government agency. Ref: {{caseNumber}}. Touch 3 of 3 — no further contact will be made.
+</p>
+
+</div>

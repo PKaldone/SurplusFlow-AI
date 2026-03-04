@@ -1,0 +1,65 @@
+<!-- Outreach Email v1.0 -->
+<!-- Template Key: outreach_email_v1 | Touch: 1 -->
+<!-- Subject Line: Unclaimed Funds May Be Owed to You — Reference {{caseNumber}} -->
+
+<div style="font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+
+<table width="100%" style="margin-bottom: 20px;">
+<tr>
+<td>
+<h2 style="color: #1a5276; margin: 0;">{{companyName}}</h2>
+<p style="color: #777; margin: 4px 0 0 0; font-size: 13px;">Surplus Recovery Services</p>
+</td>
+</tr>
+</table>
+
+<hr style="border: 1px solid #eee;">
+
+<p>Dear {{claimantFirstName}},</p>
+
+<p>Our research of public records has identified potential unclaimed funds that may belong to you:</p>
+
+<table style="width: 100%; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin: 15px 0;">
+<tr><td style="padding: 8px;"><strong>Property:</strong></td><td style="padding: 8px;">{{propertyDescription}}</td></tr>
+<tr><td style="padding: 8px;"><strong>Estimated Amount:</strong></td><td style="padding: 8px;">{{reportedAmount}}</td></tr>
+{{#if holderName}}<tr><td style="padding: 8px;"><strong>Held By:</strong></td><td style="padding: 8px;">{{holderName}}</td></tr>{{/if}}
+<tr><td style="padding: 8px;"><strong>Jurisdiction:</strong></td><td style="padding: 8px;">{{jurisdictionState}}{{#if jurisdictionCounty}}, {{jurisdictionCounty}} County{{/if}}</td></tr>
+<tr><td style="padding: 8px;"><strong>Reference:</strong></td><td style="padding: 8px;">{{caseNumber}}</td></tr>
+</table>
+
+<h3 style="color: #1a5276;">How We Found You</h3>
+<p>We research public records, government databases, and court filings to identify people with potential unclaimed funds. Your information was found in publicly available records connected to the funds described above.</p>
+
+{{#ifTrue disclosures.freeFilingDisclosure}}
+<div style="background: #fff3cd; border: 1px solid #ffc107; padding: 12px; border-radius: 4px; margin: 15px 0;">
+<strong>Important:</strong> You can file this claim yourself for free. You are not required to use a recovery service.{{#if freeFilingUrl}} Learn more: <a href="{{freeFilingUrl}}">{{freeFilingUrl}}</a>{{/if}}
+</div>
+{{/ifTrue}}
+
+<h3 style="color: #1a5276;">Why Work With Us?</h3>
+<p>If you choose to work with {{companyName}}, we handle everything — research, documentation, filing, and follow-up. Our fee is <strong>{{feePercent}}%</strong> of the amount recovered, and <strong>you pay nothing unless we succeed.</strong></p>
+
+{{#ifTrue disclosures.noLegalAdviceDisclosure}}
+<p style="font-size: 13px; color: #666;"><em>We are not attorneys and do not provide legal advice. If legal proceedings are required, we coordinate with licensed attorneys with your consent.</em></p>
+{{/ifTrue}}
+
+{{#each disclosures.stateSpecificDisclosures}}
+<p style="font-size: 13px; color: #666;"><strong>Notice:</strong> {{this}}</p>
+{{/each}}
+
+<h3 style="color: #1a5276;">Get Started</h3>
+<p>Reply to this email or contact us:</p>
+<p>
+Phone: {{companyPhone}}<br>
+Website: <a href="{{companyWebsite}}">{{companyWebsite}}</a><br>
+Reference: <strong>{{caseNumber}}</strong>
+</p>
+
+<hr style="border: 1px solid #eee; margin: 25px 0;">
+
+<p style="font-size: 12px; color: #999;">
+<strong>Not interested?</strong> <a href="{{optOutUrl}}">Unsubscribe here</a> or call {{optOutPhone}} to opt out. We will immediately stop contacting you.<br><br>
+This is a commercial message from {{companyName}}, a private surplus recovery service. We are not affiliated with any government agency. Reference: {{caseNumber}}.
+</p>
+
+</div>

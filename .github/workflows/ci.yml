@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+
+  test-rules:
+    name: Test Rule Engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:rules
+
+  test-api:
+    name: Test API
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: surplusflow_test
+          POSTGRES_USER: sfuser
+          POSTGRES_PASSWORD: sfpass_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U sfuser"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://sfuser:sfpass_test@localhost:5432/surplusflow_test
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-test-secret-at-least-32-chars!!
+      MAGIC_LINK_SECRET: ci-magic-link-secret-32-chars!!!
+      ENCRYPTION_KEY: ci-encryption-key-32-characters!
+      SSN_ENCRYPTION_KEY: ci-ssn-key-exactly-32-chars-long
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: psql $DATABASE_URL -f infra/migrations/001_core_schema.sql
+      - run: npm run test --workspace=apps/api --if-present
+
+  build:
+    name: Build All
+    runs-on: ubuntu-latest
+    needs: [lint-typecheck, test-rules]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build

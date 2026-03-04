@@ -1,0 +1,176 @@
+<!-- Master Recovery Agreement v1.0 — Generic Template -->
+<!-- Template Key: master_agreement | Version: v1.0 -->
+<!-- Controlled by jurisdiction rule engine flags -->
+
+<div class="contract" style="font-family: 'Times New Roman', serif; max-width: 8.5in; margin: 0 auto; padding: 1in; line-height: 1.6;">
+
+<h1 style="text-align: center; font-size: 18pt; margin-bottom: 4pt;">SURPLUS RECOVERY SERVICE AGREEMENT</h1>
+<p style="text-align: center; font-size: 10pt; color: #555;">Agreement No: {{caseNumber}} &nbsp;|&nbsp; Effective Date: {{formatDate effectiveDate}}</p>
+
+<hr style="margin: 20px 0;">
+
+<p><strong>This Surplus Recovery Service Agreement ("Agreement")</strong> is entered into as of {{formatDate effectiveDate}} ("Effective Date") by and between:</p>
+
+<p><strong>Recovery Service Provider ("Company"):</strong><br>
+{{companyName}}<br>
+{{companyAddress}}<br>
+Phone: {{companyPhone}} &nbsp;|&nbsp; Email: {{companyEmail}}</p>
+
+<p><strong>Client ("Claimant"):</strong><br>
+{{claimantFullName}}<br>
+{{claimantAddress}}, {{claimantCity}}, {{claimantState}} {{claimantZip}}<br>
+{{#if claimantPhone}}Phone: {{claimantPhone}}<br>{{/if}}
+{{#if claimantEmail}}Email: {{claimantEmail}}{{/if}}</p>
+
+<hr style="margin: 20px 0;">
+
+<h2>1. RECITALS AND PURPOSE</h2>
+
+<p>1.1. The Company provides surplus recovery assistance services. The Company has identified potential unclaimed or surplus funds that may belong to the Claimant.</p>
+
+<p>1.2. <strong>Property Description:</strong> {{propertyDescription}}</p>
+
+<p>1.3. <strong>Reported Amount:</strong> {{reportedAmount}} (approximate; the actual amount recovered may differ)</p>
+
+<p>1.4. <strong>Source Type:</strong>
+{{#ifEquals sourceType "unclaimed_property"}}Unclaimed Property{{/ifEquals}}
+{{#ifEquals sourceType "foreclosure_surplus"}}Foreclosure Surplus Funds{{/ifEquals}}
+{{#ifEquals sourceType "tax_sale_surplus"}}Tax Sale Surplus Funds{{/ifEquals}}
+</p>
+
+<p>1.5. <strong>Jurisdiction:</strong> {{jurisdictionState}}{{#if jurisdictionCounty}}, {{jurisdictionCounty}} County{{/if}}</p>
+
+{{#if holderName}}
+<p>1.6. <strong>Holder/Custodian of Funds:</strong> {{holderName}}</p>
+{{/if}}
+
+<h2>2. SERVICES</h2>
+
+<p>2.1. The Company agrees to provide the following services on behalf of the Claimant:</p>
+
+<p style="padding-left: 20px;">
+(a) Research and identify surplus funds that may be owed to the Claimant;<br>
+(b) Prepare and assemble necessary documentation for the claim;<br>
+(c) Submit the claim to the appropriate government agency, court, or custodial entity;<br>
+(d) Follow up on the claim status and communicate updates to the Claimant;<br>
+(e) Coordinate with any required third parties for claim processing.
+</p>
+
+<p>2.2. <strong>The Company does NOT provide legal advice and is NOT acting as the Claimant's attorney.</strong> If legal representation is needed, the Company will recommend the Claimant seek independent legal counsel. The Claimant understands and agrees that the Company is providing administrative recovery services only.</p>
+
+{{#ifTrue showAttorneyConsent}}
+<p>2.3. This claim may require court filing or legal proceedings. If so, the Company will coordinate with a licensed attorney. A separate Attorney Consent form is attached as an addendum to this Agreement.</p>
+{{/ifTrue}}
+
+<h2>3. COMPENSATION</h2>
+
+<p>3.1. <strong>Success Fee:</strong> The Claimant agrees to pay the Company a fee equal to <strong>{{feePercent}}%</strong> of the total amount actually recovered and received by the Claimant ("Success Fee").
+{{#if feeCap}} The Success Fee shall not exceed <strong>{{feeCap}}</strong> regardless of the amount recovered.{{/if}}</p>
+
+<p>3.2. <strong>No Upfront Fees:</strong> The Company will NOT charge any fees unless and until funds are successfully recovered and received by the Claimant. If no funds are recovered, the Claimant owes nothing.</p>
+
+<p>3.3. <strong>Direct Payment to Claimant:</strong> The recovered funds shall be paid directly to the Claimant by the holding entity. The Company will invoice the Claimant for the Success Fee after the Claimant confirms receipt of the recovered funds.</p>
+
+<p>3.4. The Success Fee is calculated based on the gross amount recovered before any deductions. If the holding entity deducts fees or taxes before payment, the Success Fee is calculated on the amount actually received by the Claimant.</p>
+
+<h2>4. CLAIMANT OBLIGATIONS</h2>
+
+<p>4.1. The Claimant agrees to:</p>
+
+<p style="padding-left: 20px;">
+(a) Provide truthful, complete, and accurate information and documentation;<br>
+(b) Respond to requests for information or signatures in a timely manner;<br>
+(c) Not engage another recovery service for the same claim during the term of this Agreement;<br>
+(d) Notify the Company promptly if the Claimant receives any communication from the holding entity regarding the claim;<br>
+(e) Pay the Success Fee within thirty (30) days of receiving recovered funds.
+</p>
+
+<h2>5. TERM AND TERMINATION</h2>
+
+<p>5.1. This Agreement is effective as of the Effective Date and continues until the claim is resolved (paid, denied, or otherwise concluded), or until terminated by either party.</p>
+
+<p>5.2. Either party may terminate this Agreement with thirty (30) days' written notice. If the Claimant terminates after the Company has submitted a claim, and funds are subsequently recovered as a result of the Company's work, the Success Fee remains due.</p>
+
+{{#ifTrue coolingOffDays}}
+<p>5.3. <strong>RIGHT OF RESCISSION:</strong> The Claimant has the right to cancel this Agreement within <strong>{{coolingOffDays}} calendar days</strong> of signing ("Cooling-Off Period") without penalty or obligation. To cancel, the Claimant must provide written notice to the Company at the address above or via email to {{companyEmail}}. The rescission deadline is: <strong>{{formatDate rescissionDeadline}}</strong>.</p>
+{{/ifTrue}}
+
+<h2>6. IMPORTANT DISCLOSURES</h2>
+
+{{#ifInArray requiredDisclosures "free_filing_disclosure"}}
+<p>6.1. <strong>YOU MAY FILE THIS CLAIM YOURSELF FOR FREE.</strong> You are not required to use a recovery service. You may file a claim directly with the appropriate state or local agency at no cost.
+{{#if freeFilingUrl}} For more information, visit: {{freeFilingUrl}}{{/if}}</p>
+{{/ifInArray}}
+
+{{#ifInArray requiredDisclosures "fee_disclosure"}}
+<p>6.2. <strong>FEE DISCLOSURE:</strong> The Company will charge a fee of {{feePercent}}% of the recovered amount.{{#if feeCap}} The maximum fee is capped at {{feeCap}}.{{/if}} No fee is charged unless recovery is successful.</p>
+{{/ifInArray}}
+
+{{#ifInArray requiredDisclosures "no_legal_advice"}}
+<p>6.3. <strong>NO LEGAL ADVICE:</strong> The Company is not a law firm and does not provide legal advice. This agreement does not create an attorney-client relationship. If you need legal advice, please consult an independent attorney.</p>
+{{/ifInArray}}
+
+{{#ifInArray requiredDisclosures "rescission_disclosure"}}
+<p>6.4. <strong>RESCISSION RIGHT:</strong> You have the right to cancel this Agreement within {{coolingOffDays}} days of signing. See Section 5.3 for details.</p>
+{{/ifInArray}}
+
+<h2>7. PRIVACY AND DATA PROTECTION</h2>
+
+<p>7.1. The Company will handle all personal information, documents, and identity materials provided by the Claimant with strict confidentiality. The Company will use this information solely for the purpose of processing the Claimant's recovery claim.</p>
+
+<p>7.2. Documents containing sensitive personal information (such as identification cards or Social Security Numbers) will be stored using industry-standard encryption and access controls. The Company will not sell, share, or disclose the Claimant's personal information to third parties except as necessary to process the claim or as required by law.</p>
+
+<p>7.3. The Claimant may request deletion of their personal information at any time, subject to legal retention requirements.</p>
+
+<h2>8. LIMITATION OF LIABILITY</h2>
+
+<p>8.1. The Company's total liability under this Agreement shall not exceed the amount of the Success Fee actually paid by the Claimant.</p>
+
+<p>8.2. The Company does not guarantee that any claim will be successful. The Company will use commercially reasonable efforts to process the claim, but the final decision on any claim rests with the applicable government agency, court, or custodial entity.</p>
+
+<h2>9. GOVERNING LAW</h2>
+
+<p>9.1. This Agreement shall be governed by the laws of the State of {{jurisdictionState}}.</p>
+
+<h2>10. ENTIRE AGREEMENT</h2>
+
+<p>10.1. This Agreement, together with any attached addenda, constitutes the entire agreement between the parties. Any amendments must be in writing and signed by both parties.</p>
+
+<p>10.2. Attached Addenda (as applicable):</p>
+<p style="padding-left: 20px;">
+&#9744; Disclosure Addendum v1.0<br>
+{{#ifTrue showAssignmentAddendum}}&#9745; Assignment Addendum{{else}}&#9744; Assignment Addendum (N/A — not permitted in this jurisdiction){{/ifTrue}}<br>
+{{#ifTrue showNotaryPage}}&#9745; Notary Instruction Page{{else}}&#9744; Notary Instruction Page (N/A — not required){{/ifTrue}}<br>
+{{#ifTrue showAttorneyConsent}}&#9745; Attorney Review Consent{{else}}&#9744; Attorney Review Consent (N/A){{/ifTrue}}
+</p>
+
+<hr style="margin: 30px 0;">
+
+<h2>SIGNATURES</h2>
+
+<table style="width: 100%; margin-top: 20px;">
+<tr>
+<td style="width: 50%; vertical-align: top; padding-right: 20px;">
+<p><strong>COMPANY:</strong></p>
+<p>{{companyName}}</p>
+<br><br>
+<p>___________________________________</p>
+<p>Authorized Representative</p>
+<p>Date: _______________</p>
+</td>
+<td style="width: 50%; vertical-align: top; padding-left: 20px;">
+<p><strong>CLAIMANT:</strong></p>
+<p>{{claimantFullName}}</p>
+<br><br>
+<p>___________________________________</p>
+<p>Signature</p>
+<p>Date: _______________</p>
+</td>
+</tr>
+</table>
+
+<p style="text-align: center; font-size: 9pt; color: #777; margin-top: 40px;">
+Agreement No: {{caseNumber}} &nbsp;|&nbsp; Version: v1.0 &nbsp;|&nbsp; Generated: {{formatDate effectiveDate}}
+</p>
+
+</div>

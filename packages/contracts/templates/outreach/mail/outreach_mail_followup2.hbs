@@ -1,0 +1,44 @@
+{{!-- Follow-up Mail Touch 2 --}}
+{{!-- Template Key: outreach_mail_followup2 | Touch: 2 --}}
+{{!-- Sent 14 days after Touch 1 if no response --}}
+
+<div class="outreach-letter" style="font-family: 'Times New Roman', serif; max-width: 8.5in; margin: 0 auto; padding: 1in; line-height: 1.6; font-size: 12pt;">
+
+<p style="text-align: right;">
+{{companyName}}<br>
+{{companyAddress}}<br>
+{{todayDate}}
+</p>
+
+<p>
+{{claimantFullName}}<br>
+{{#if claimantAddress}}{{claimantAddress}}<br>{{/if}}
+{{#if claimantCity}}{{claimantCity}}, {{claimantState}} {{claimantZip}}{{/if}}
+</p>
+
+<p>Re: Follow-Up — Potential Unclaimed Funds — Reference {{caseNumber}}</p>
+
+<p>Dear {{claimantFirstName}},</p>
+
+<p>We recently contacted you about potential unclaimed funds (~{{reportedAmount}}) that our research suggests may belong to you. We have not yet heard back from you, so we wanted to follow up.</p>
+
+<p>We understand you may be busy or cautious about this type of communication. We want to assure you:</p>
+
+<p style="padding-left: 20px;">
+• <strong>This is not a scam.</strong> We are a licensed surplus recovery service that helps people recover funds they may not know they have.<br>
+• <strong>You can verify this independently.</strong> You can look up your name on your state's unclaimed property website to confirm these funds exist.<br>
+• <strong>You can file yourself for free.</strong> Our service is optional — we charge {{feePercent}}% only if we successfully recover funds for you.{{#if freeFilingUrl}}<br>
+• <strong>File free at:</strong> {{freeFilingUrl}}{{/if}}
+</p>
+
+<p>If you would like our help, or if you have any questions, please contact us at {{companyPhone}} or {{companyEmail}} and reference <strong>{{caseNumber}}</strong>.</p>
+
+<p><strong>To stop receiving communications:</strong> Visit {{optOutUrl}}, call {{optOutPhone}}, or write "OPT OUT" to our address above. We will immediately cease contact.</p>
+
+<p>Sincerely,<br>{{companyName}}</p>
+
+<p style="font-size: 9pt; color: #777; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px;">
+Commercial solicitation from {{companyName}}. Not affiliated with any government agency. Ref: {{caseNumber}}. Touch 2 of 3.
+</p>
+
+</div>

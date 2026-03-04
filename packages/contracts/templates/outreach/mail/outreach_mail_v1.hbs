@@ -1,0 +1,95 @@
+<!-- Outreach Letter v1.0 — Postal Mail -->
+<!-- Template Key: outreach_mail_v1 | Touch: 1 -->
+
+<div class="outreach-letter" style="font-family: 'Times New Roman', serif; max-width: 8.5in; margin: 0 auto; padding: 1in; line-height: 1.6; font-size: 12pt;">
+
+<p style="text-align: right;">
+{{companyName}}<br>
+{{companyAddress}}<br>
+{{companyPhone}}<br>
+{{companyEmail}}<br>
+<br>
+{{todayDate}}
+</p>
+
+<p>
+{{claimantFullName}}<br>
+{{#if claimantAddress}}{{claimantAddress}}<br>{{/if}}
+{{#if claimantCity}}{{claimantCity}}, {{claimantState}} {{claimantZip}}{{/if}}
+</p>
+
+<p>Re: Potential Unclaimed Funds — Reference {{caseNumber}}</p>
+
+<p>Dear {{claimantFirstName}} {{claimantLastName}},</p>
+
+<p>We are writing to let you know that our research has identified potential unclaimed funds that may belong to you. Here are the details of what we found:</p>
+
+<p style="padding-left: 20px; border-left: 3px solid #333;">
+<strong>Property Description:</strong> {{propertyDescription}}<br>
+<strong>Estimated Amount:</strong> {{reportedAmount}}<br>
+{{#if holderName}}<strong>Holder:</strong> {{holderName}}<br>{{/if}}
+<strong>Jurisdiction:</strong> {{jurisdictionState}}{{#if jurisdictionCounty}}, {{jurisdictionCounty}} County{{/if}}
+</p>
+
+<h3>How We Found You</h3>
+
+<p>We are a surplus recovery service that researches public records, government databases, and court filings to identify individuals who may have unclaimed funds. Your name and address were found in connection with the funds described above through publicly available records.</p>
+
+<h3>What You Should Know</h3>
+
+{{#ifTrue disclosures.freeFilingDisclosure}}
+<p><strong>You can file this claim yourself for free.</strong> You are under no obligation to use our services. You may contact the appropriate state agency or court directly to file a claim at no cost.{{#if freeFilingUrl}} For more information, visit: {{freeFilingUrl}}{{/if}}</p>
+{{/ifTrue}}
+
+<p><strong>Our service is success-based.</strong> If you choose to work with us, we handle the entire recovery process for you — research, documentation, filing, and follow-up. Our fee is {{feePercent}}% of the amount recovered, and <strong>you pay nothing unless we successfully recover funds for you.</strong></p>
+
+{{#ifTrue disclosures.noLegalAdviceDisclosure}}
+<p><strong>We are not attorneys</strong> and do not provide legal advice. If your claim requires legal proceedings, we will coordinate with a licensed attorney and obtain your consent first.</p>
+{{/ifTrue}}
+
+{{#ifTrue disclosures.rescissionDisclosure}}
+<p><strong>Cancellation rights:</strong> If you sign an agreement with us, you have the right to cancel within the applicable cooling-off period in your state, at no cost or obligation.</p>
+{{/ifTrue}}
+
+{{#each disclosures.stateSpecificDisclosures}}
+<p><strong>State-Specific Notice:</strong> {{this}}</p>
+{{/each}}
+
+<h3>Next Steps</h3>
+
+<p>If you would like our help recovering these funds, you can contact us at:</p>
+
+<p style="padding-left: 20px;">
+Phone: {{companyPhone}}<br>
+Email: {{companyEmail}}<br>
+Website: {{companyWebsite}}
+</p>
+
+<p>Please reference <strong>{{caseNumber}}</strong> when you reach out.</p>
+
+<h3>Not Interested?</h3>
+
+<p>If you do not wish to receive further communications from us, you can opt out at any time:</p>
+
+<p style="padding-left: 20px;">
+Online: {{optOutUrl}}<br>
+Phone: {{optOutPhone}}<br>
+Mail: Send written request to the address above with "OPT OUT" and reference {{caseNumber}}
+</p>
+
+<p>We will promptly remove you from all future communications.</p>
+
+<br>
+
+<p>Sincerely,</p>
+<br>
+<p>
+{{companyName}}<br>
+Surplus Recovery Services
+</p>
+
+<p style="font-size: 9pt; color: #777; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 10px;">
+This is a commercial solicitation from {{companyName}}. We are a private surplus recovery service and are not affiliated with any government agency. Reference: {{caseNumber}}.
+</p>
+
+</div>
