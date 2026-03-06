@@ -8,7 +8,7 @@ import { query } from '../../lib/db.js';
 
 export async function attorneyRoutes(app: FastifyInstance) {
   app.get('/assignments', {
-    preHandler: [app.authenticate, app.requireRole(['attorney'])],
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'attorney'])],
   }, async (request, reply) => {
     const attorneyId = request.user!.sub;
     const { page: rawPage, pageSize: rawPageSize, status } = request.query as Record<string, string>;
@@ -54,7 +54,7 @@ export async function attorneyRoutes(app: FastifyInstance) {
   });
 
   app.get('/assignments/:id', {
-    preHandler: [app.authenticate, app.requireRole(['attorney'])],
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'attorney'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const attorneyId = request.user!.sub;
@@ -135,7 +135,7 @@ export async function attorneyRoutes(app: FastifyInstance) {
   });
 
   app.get('/assignments/:id/dossier', {
-    preHandler: [app.authenticate, app.requireRole(['attorney'])],
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'attorney'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const attorneyId = request.user!.sub;

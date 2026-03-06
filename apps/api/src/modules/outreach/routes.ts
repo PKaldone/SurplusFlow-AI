@@ -213,4 +213,202 @@ export async function outreachRoutes(app: FastifyInstance) {
 
     return reply.send({ message: 'You have been removed from our contact list. You will not receive further communications.' });
   });
+
+  // --- Templates (frontend expects GET /templates) ---
+  app.get('/templates', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops', 'compliance'])],
+  }, async (request, reply) => {
+    const { page: rawPage, pageSize: rawPageSize, channel } = request.query as Record<string, string>;
+    const page = Math.max(1, parseInt(rawPage, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(rawPageSize, 10) || 25));
+    const offset = (page - 1) * pageSize;
+
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let paramIdx = 1;
+
+    if (channel) {
+      conditions.push(`channel = $${paramIdx++}`);
+      params.push(channel);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM contract_templates ${where}`,
+      params,
+    );
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    const dataResult = await query(
+      `SELECT id, name, channel, description, body, subject, created_at AS "createdAt"
+       FROM contract_templates ${where}
+       ORDER BY created_at DESC
+       LIMIT $${paramIdx++} OFFSET $${paramIdx++}`,
+      [...params, pageSize, offset],
+    );
+
+    return reply.send({
+      data: dataResult.rows,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
+  });
+
+  // --- Suppression List ---
+  app.get('/suppression', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops', 'compliance'])],
+  }, async (request, reply) => {
+    const { page: rawPage, pageSize: rawPageSize, identifierType } = request.query as Record<string, string>;
+    const page = Math.max(1, parseInt(rawPage, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(rawPageSize, 10) || 25));
+    const offset = (page - 1) * pageSize;
+
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let paramIdx = 1;
+
+    if (identifierType) {
+      conditions.push(`identifier_type = $${paramIdx++}`);
+      params.push(identifierType);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM suppression_list ${where}`,
+      params,
+    );
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    const dataResult = await query(
+      `SELECT * FROM suppression_list ${where}
+       ORDER BY created_at DESC
+       LIMIT $${paramIdx++} OFFSET $${paramIdx++}`,
+      [...params, pageSize, offset],
+    );
+
+    return reply.send({
+      data: dataResult.rows,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
+  });
+
+  app.post('/suppression', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops', 'compliance'])],
+  }, async (request, reply) => {
+    const body = request.body as {
+      identifier: string; identifierType: string; reason?: string;
+    };
+
+    const result = await query(
+      `INSERT INTO suppression_list (identifier, identifier_type, reason, source)
+       VALUES ($1, $2, $3, 'manual')
+       ON CONFLICT DO NOTHING
+       RETURNING *`,
+      [body.identifier, body.identifierType, body.reason ?? 'Manually added'],
+    );
+
+    if (result.rowCount === 0) {
+      return reply.status(409).send({ statusCode: 409, error: 'Conflict', message: 'Entry already exists in suppression list' });
+    }
+
+    await request.logAudit({
+      action: AUDIT_ACTIONS.OUTREACH_OPTED_OUT,
+      resourceType: 'suppression_list',
+      resourceId: result.rows[0].id,
+      details: { identifier: body.identifier.substring(0, 3) + '***', identifierType: body.identifierType },
+    });
+
+    return reply.status(201).send({ message: 'Suppression entry added', entry: result.rows[0] });
+  });
+
+  // --- Case-level Outreach ---
+  app.get('/cases/:caseId/history', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops', 'compliance'])],
+  }, async (request, reply) => {
+    const { caseId } = request.params as { caseId: string };
+    const { page: rawPage, pageSize: rawPageSize } = request.query as Record<string, string>;
+    const page = Math.max(1, parseInt(rawPage, 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(rawPageSize, 10) || 25));
+    const offset = (page - 1) * pageSize;
+
+    const countResult = await query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM outreach_records WHERE case_id = $1`,
+      [caseId],
+    );
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    const dataResult = await query(
+      `SELECT r.*, c.name AS campaign_name
+       FROM outreach_records r
+       LEFT JOIN outreach_campaigns c ON c.id = r.campaign_id
+       WHERE r.case_id = $1
+       ORDER BY r.created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [caseId, pageSize, offset],
+    );
+
+    return reply.send({
+      data: dataResult.rows,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
+  });
+
+  app.post('/cases/:caseId/queue', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops'])],
+  }, async (request, reply) => {
+    const { caseId } = request.params as { caseId: string };
+    const body = request.body as { channel: string; templateId: string };
+
+    const result = await query(
+      `INSERT INTO outreach_records (case_id, channel, campaign_id, status, created_by)
+       VALUES ($1, $2, $3, 'queued', $4)
+       RETURNING *`,
+      [caseId, body.channel, body.templateId, request.user!.sub],
+    );
+
+    await request.logAudit({
+      action: AUDIT_ACTIONS.OUTREACH_CREATED,
+      resourceType: 'outreach_record',
+      resourceId: result.rows[0].id,
+      details: { caseId, channel: body.channel, templateId: body.templateId },
+    });
+
+    return reply.status(201).send({ message: 'Outreach queued', record: result.rows[0] });
+  });
+
+  app.patch('/cases/:recordId/approve', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'compliance'])],
+  }, async (request, reply) => {
+    const { recordId } = request.params as { recordId: string };
+
+    const result = await query(
+      `UPDATE outreach_records
+       SET status = 'approved', updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [recordId],
+    );
+
+    if (result.rowCount === 0) {
+      return reply.status(404).send({ statusCode: 404, error: 'Not Found', message: 'Outreach record not found' });
+    }
+
+    await request.logAudit({
+      action: AUDIT_ACTIONS.OUTREACH_APPROVED,
+      resourceType: 'outreach_record',
+      resourceId: recordId,
+    });
+
+    return reply.send({ message: 'Outreach record approved', record: result.rows[0] });
+  });
 }

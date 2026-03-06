@@ -3,6 +3,7 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify';
+import crypto from 'node:crypto';
 import { canTransition, AUDIT_ACTIONS, CASE_NUMBER_PREFIX } from '@surplusflow/shared';
 import type { CaseStatus } from '@surplusflow/shared';
 import { query } from '../../lib/db.js';
@@ -271,6 +272,44 @@ export async function caseRoutes(app: FastifyInstance) {
     );
 
     return reply.send({ caseId: id, documents: result.rows });
+  });
+
+  app.post('/:id/documents', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops'])],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { docType, filename, mimeType, fileBase64 } = request.body as {
+      docType: string;
+      filename: string;
+      mimeType: string;
+      fileBase64: string;
+    };
+
+    // Verify case exists
+    const caseResult = await query(`SELECT id FROM claim_cases WHERE id = $1`, [id]);
+    if (caseResult.rowCount === 0) {
+      return reply.status(404).send({ statusCode: 404, error: 'Not Found', message: 'Case not found' });
+    }
+
+    const docId = crypto.randomUUID();
+    const storageKey = `cases/${id}/${docType}/${docId}-${filename}`;
+
+    const result = await query(
+      `INSERT INTO documents (id, case_id, doc_type, filename, mime_type, uploaded_by, storage_key, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       RETURNING *`,
+      [docId, id, docType, filename, mimeType, request.user!.sub, storageKey],
+    );
+
+    await request.logAudit({
+      action: AUDIT_ACTIONS.DOC_UPLOADED ?? 'document.uploaded',
+      resourceType: 'document',
+      resourceId: docId,
+      caseId: id,
+      details: { docType, filename, mimeType },
+    });
+
+    return reply.status(201).send(result.rows[0]);
   });
 
   app.get('/:id/checklist', {

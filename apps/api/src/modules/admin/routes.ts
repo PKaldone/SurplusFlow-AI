@@ -151,6 +151,32 @@ export async function adminRoutes(app: FastifyInstance) {
     });
   });
 
+  // Alias: GET /dashboard → same as /dashboard/stats (frontend calls GET /api/v1/admin/dashboard)
+  app.get('/dashboard', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin'])],
+  }, async (request, reply) => {
+    const [totalCases, casesByStatus, totalOpportunities, totalClaimants, recentActivity] = await Promise.all([
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM claim_cases`),
+      query<{ status: string; count: string }>(`SELECT status, COUNT(*) as count FROM claim_cases GROUP BY status`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM opportunities`),
+      query<{ count: string }>(`SELECT COUNT(*) as count FROM claimants`),
+      query(`SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT 20`),
+    ]);
+
+    const statusCounts: Record<string, number> = {};
+    for (const row of casesByStatus.rows) {
+      statusCounts[row.status] = parseInt(row.count, 10);
+    }
+
+    return reply.send({
+      totalCases: parseInt(totalCases.rows[0].count, 10),
+      casesByStatus: statusCounts,
+      totalOpportunities: parseInt(totalOpportunities.rows[0].count, 10),
+      totalClaimants: parseInt(totalClaimants.rows[0].count, 10),
+      recentActivity: recentActivity.rows,
+    });
+  });
+
   // --- Audit Log ---
   app.get('/audit', {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'compliance'])],

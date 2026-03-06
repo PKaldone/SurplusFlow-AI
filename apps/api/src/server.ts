@@ -19,6 +19,7 @@ import { outreachRoutes } from './modules/outreach/routes.js';
 import { attorneyRoutes } from './modules/attorney/routes.js';
 import { complianceRoutes } from './modules/compliance/routes.js';
 import { adminRoutes } from './modules/admin/routes.js';
+import { portalRoutes } from './modules/portal/routes.js';
 import { config } from './config/index.js';
 
 export async function buildApp() {
@@ -72,6 +73,7 @@ export async function buildApp() {
   await app.register(attorneyRoutes, { prefix: '/api/v1/attorney' });
   await app.register(complianceRoutes, { prefix: '/api/v1/rules' });
   await app.register(adminRoutes, { prefix: '/api/v1/admin' });
+  await app.register(portalRoutes, { prefix: '/api/v1/portal' });
 
   return app;
 }
