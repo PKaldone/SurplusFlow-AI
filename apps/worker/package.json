@@ -21,7 +21,8 @@
     "ioredis": "^5.3.0",
     "pdf-parse": "^2.2.2",
     "pg": "^8.11.0",
-    "puppeteer": "^22.0.0"
+    "puppeteer": "^22.0.0",
+    "resend": "^6.4.2"
   },
   "devDependencies": {
     "@types/pdf-parse": "^1.1.5",

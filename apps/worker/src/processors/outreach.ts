@@ -9,6 +9,8 @@ import { evaluateStopRules, DEFAULT_OUTREACH_POLICY, getOutreachTemplate } from 
 import type { OutreachContext } from '@surplusflow/contracts/src/outreach.js';
 import { QUEUES, AUDIT_ACTIONS, COMPANY } from '@surplusflow/shared';
 import type { OutreachChannel } from '@surplusflow/shared';
+import { sendEmail, isEmailConfigured } from '../lib/email.js';
+import { getEmailSubject, getEmailHtml, getEmailText } from '../templates/outreach-email.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://:sfredis_local_dev@localhost:6379';
 const parsed = new URL(REDIS_URL);
@@ -273,7 +275,50 @@ async function handleGenerateOutreach(
     `[Outreach] Created ${channel} record ${outreachRecordId} for case ${caseRow.case_number}, touch ${touchNumber}`,
   );
 
-  // 5. Schedule follow-up for next touch if not at max
+  // 5. Send email if channel is email and claimant has an email address
+  if ((channel === 'email' || channel === 'mail') && caseRow.email && isEmailConfigured()) {
+    try {
+      const subject = getEmailSubject(touchNumber, mergeData as Parameters<typeof getEmailSubject>[1]);
+      const html = getEmailHtml(touchNumber, mergeData as Parameters<typeof getEmailHtml>[1]);
+      const text = getEmailText(touchNumber, mergeData as Parameters<typeof getEmailText>[1]);
+
+      const result = await sendEmail({
+        to: caseRow.email,
+        subject,
+        html,
+        text,
+        replyTo: COMPANY.email,
+        tags: [
+          { name: 'case', value: caseRow.case_number },
+          { name: 'touch', value: String(touchNumber) },
+          { name: 'channel', value: channel },
+        ],
+      });
+
+      if (result.success) {
+        await query(
+          `UPDATE outreach_records SET status = 'sent', sent_at = NOW(), external_id = $2 WHERE id = $1`,
+          [outreachRecordId, result.id],
+        );
+        console.log(`[Outreach] Email sent to ${caseRow.email} for case ${caseRow.case_number} (resend:${result.id})`);
+      } else {
+        await query(
+          `UPDATE outreach_records SET status = 'failed', stop_reason = $2 WHERE id = $1`,
+          [outreachRecordId, `Email send failed: ${result.error}`],
+        );
+        console.error(`[Outreach] Email failed for case ${caseRow.case_number}: ${result.error}`);
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      await query(
+        `UPDATE outreach_records SET status = 'failed', stop_reason = $2 WHERE id = $1`,
+        [outreachRecordId, `Email error: ${errMsg}`],
+      );
+      console.error(`[Outreach] Email error for case ${caseRow.case_number}: ${errMsg}`);
+    }
+  }
+
+  // 6. Schedule follow-up for next touch if not at max
   if (touchNumber < DEFAULT_OUTREACH_POLICY.maxTouches) {
     const delayMs = getFollowupDelayMs(touchNumber);
     await outreachQueue.add(
