@@ -2,10 +2,29 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLES: Record<string, string> = {
-  // Case statuses
+  // Case statuses (full lifecycle)
   OPPORTUNITY_IDENTIFIED: "bg-gray-100 text-gray-700 border-gray-200",
   OUTREACH_PENDING: "bg-blue-50 text-blue-700 border-blue-200",
   OUTREACH_SENT: "bg-blue-100 text-blue-700 border-blue-200",
+  OUTREACH_RESPONDED: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  CLAIMANT_ENROLLED: "bg-purple-100 text-purple-700 border-purple-200",
+  DOCS_COLLECTING: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  COMPLIANCE_REVIEW: "bg-orange-100 text-orange-700 border-orange-200",
+  NEEDS_LEGAL_REVIEW: "bg-orange-200 text-orange-800 border-orange-300",
+  CLAIM_READY: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  CLAIM_FILED: "bg-cyan-100 text-cyan-700 border-cyan-200",
+  CLAIM_PROCESSING: "bg-cyan-200 text-cyan-800 border-cyan-300",
+  PAYOUT_RECEIVED: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  CLAIM_DENIED: "bg-red-100 text-red-700 border-red-200",
+  INVOICE_SENT: "bg-green-100 text-green-700 border-green-200",
+  FEE_COLLECTED: "bg-green-200 text-green-800 border-green-300",
+  CLOSED_COMPLETE: "bg-green-100 text-green-800 border-green-300",
+  CLOSED_NO_RESPONSE: "bg-gray-200 text-gray-600 border-gray-300",
+  CLOSED_DENIED: "bg-red-50 text-red-600 border-red-200",
+  CLOSED_CLAIMANT_WITHDREW: "bg-amber-100 text-amber-700 border-amber-200",
+  CLOSED_DUPLICATE: "bg-gray-100 text-gray-500 border-gray-200",
+  CLOSED_INELIGIBLE: "bg-red-100 text-red-700 border-red-200",
+  // Legacy statuses
   CONTACTED: "bg-indigo-100 text-indigo-700 border-indigo-200",
   ENROLLED: "bg-purple-100 text-purple-700 border-purple-200",
   PACKET_ASSEMBLY: "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -15,9 +34,20 @@ const STATUS_STYLES: Record<string, string> = {
   RECOVERED: "bg-green-100 text-green-700 border-green-200",
   INVOICED: "bg-green-200 text-green-800 border-green-300",
   CLOSED_SUCCESSFUL: "bg-green-100 text-green-800 border-green-300",
-  CLOSED_INELIGIBLE: "bg-red-100 text-red-700 border-red-200",
   ON_HOLD: "bg-amber-100 text-amber-700 border-amber-200",
   BLOCKED: "bg-red-100 text-red-700 border-red-200",
+  // Document types
+  id_proof: "bg-blue-50 text-blue-700 border-blue-200",
+  ssn_card: "bg-blue-100 text-blue-700 border-blue-200",
+  deed: "bg-amber-100 text-amber-700 border-amber-200",
+  contract: "bg-purple-100 text-purple-700 border-purple-200",
+  disclosure: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  assignment: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  notary_page: "bg-orange-100 text-orange-700 border-orange-200",
+  claim_form: "bg-cyan-100 text-cyan-700 border-cyan-200",
+  correspondence: "bg-gray-100 text-gray-700 border-gray-200",
+  attorney_dossier: "bg-rose-100 text-rose-700 border-rose-200",
+  other: "bg-gray-100 text-gray-500 border-gray-200",
 
   // Invoice statuses
   draft: "bg-gray-100 text-gray-700 border-gray-200",

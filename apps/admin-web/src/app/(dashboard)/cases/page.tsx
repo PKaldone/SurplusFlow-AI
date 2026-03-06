@@ -1,106 +1,200 @@
-// ============================================================
-// SurplusFlow AI — Cases List Page
-// /apps/admin-web/src/app/cases/page.tsx
-// ============================================================
-
 'use client';
-import React, { useState } from 'react';
 
-const STATUS_COLORS: Record<string, string> = {
-  PROSPECT: 'bg-gray-100 text-gray-700',
-  OUTREACH: 'bg-blue-100 text-blue-700',
-  CONTACTED: 'bg-indigo-100 text-indigo-700',
-  ENROLLED: 'bg-purple-100 text-purple-700',
-  PACKET_ASSEMBLY: 'bg-yellow-100 text-yellow-700',
-  ATTORNEY_REVIEW: 'bg-orange-100 text-orange-700',
-  SUBMITTED: 'bg-cyan-100 text-cyan-700',
-  AWAITING_PAYOUT: 'bg-emerald-100 text-emerald-700',
-  INVOICED: 'bg-green-100 text-green-700',
-  CLOSED: 'bg-green-200 text-green-800',
-  BLOCKED: 'bg-red-100 text-red-700',
-  ON_HOLD: 'bg-amber-100 text-amber-700',
-};
+import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
 
-// Sample data for UI scaffolding
-const SAMPLE_CASES = [
-  { id: '1', caseNumber: 'SF-2024-00001', claimantName: 'John Doe', state: 'CA', sourceType: 'unclaimed_property', status: 'ENROLLED', amount: 4500, assignedTo: 'Jane Ops' },
-  { id: '2', caseNumber: 'SF-2024-00002', claimantName: 'Jane Smith', state: 'FL', sourceType: 'foreclosure_surplus', status: 'ATTORNEY_REVIEW', amount: 28000, assignedTo: 'Jane Ops' },
-  { id: '3', caseNumber: 'SF-2024-00003', claimantName: 'Robert Johnson', state: 'TX', sourceType: 'tax_sale_surplus', status: 'PROSPECT', amount: 12000, assignedTo: null },
-];
+import { PageHeader } from '@/components/page-header';
+import { StatusBadge } from '@/components/status-badge';
+import { DataTable, Column } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import { CreateCaseDialog } from '@/components/create-case-dialog';
+import {
+  useCases,
+  CASE_STATUSES,
+  formatCurrency,
+  formatSourceType,
+} from '@/lib/hooks/use-cases';
+
+interface CaseRow {
+  id: string;
+  caseNumber: string;
+  claimantName?: string;
+  claimant?: { firstName?: string; lastName?: string; name?: string };
+  state?: string;
+  sourceType?: string;
+  estimatedAmount?: number;
+  amount?: number;
+  status: string;
+  assignedOpsId?: string;
+  assignedOps?: { name?: string };
+  [key: string]: unknown;
+}
+
+const LIMIT = 25;
 
 export default function CasesPage() {
-  const [statusFilter, setStatusFilter] = useState('all');
+  const router = useRouter();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const filtered = SAMPLE_CASES.filter(c => {
-    if (statusFilter !== 'all' && c.status !== statusFilter) return false;
-    if (search && !c.caseNumber.includes(search) && !c.claimantName.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
+  const { cases, total, isLoading, mutate } = useCases({
+    status: statusFilter === 'all' ? undefined : statusFilter,
+    page,
+    limit: LIMIT,
   });
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return cases as CaseRow[];
+    const q = search.toLowerCase();
+    return (cases as CaseRow[]).filter((c) => {
+      const name =
+        c.claimantName ||
+        c.claimant?.name ||
+        [c.claimant?.firstName, c.claimant?.lastName].filter(Boolean).join(' ');
+      return (
+        c.caseNumber?.toLowerCase().includes(q) ||
+        name?.toLowerCase().includes(q)
+      );
+    });
+  }, [cases, search]);
+
+  function getClaimantName(row: CaseRow): string {
+    return (
+      row.claimantName ||
+      row.claimant?.name ||
+      [row.claimant?.firstName, row.claimant?.lastName].filter(Boolean).join(' ') ||
+      '-'
+    );
+  }
+
+  function getAssignedName(row: CaseRow): string {
+    return row.assignedOps?.name || row.assignedOpsId || '-';
+  }
+
+  const columns: Column<CaseRow>[] = [
+    {
+      key: 'caseNumber',
+      header: 'Case #',
+      className: 'font-mono text-xs',
+      render: (row) => row.caseNumber || '-',
+    },
+    {
+      key: 'claimant',
+      header: 'Claimant',
+      render: (row) => <span className="font-medium">{getClaimantName(row)}</span>,
+    },
+    {
+      key: 'state',
+      header: 'State',
+      render: (row) => row.state || '-',
+    },
+    {
+      key: 'sourceType',
+      header: 'Type',
+      className: 'text-xs',
+      render: (row) => formatSourceType(row.sourceType),
+    },
+    {
+      key: 'amount',
+      header: 'Amount',
+      render: (row) => formatCurrency(row.estimatedAmount ?? row.amount),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => <StatusBadge status={row.status} />,
+    },
+    {
+      key: 'assignedOpsId',
+      header: 'Assigned',
+      render: (row) => (
+        <span className="text-muted-foreground">{getAssignedName(row)}</span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (row) => (
+        <Button
+          variant="link"
+          size="sm"
+          className="px-0 text-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/cases/${row.id}`);
+          }}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
+
+  function handleStatusChange(value: string) {
+    setStatusFilter(value);
+    setPage(1);
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Cases</h1>
-        <button className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm hover:bg-slate-800">
-          + New Case
-        </button>
-      </div>
+      <PageHeader title="Cases" description="Manage surplus recovery cases">
+        <Button onClick={() => setDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Case
+        </Button>
+      </PageHeader>
 
-      {/* Filters */}
-      <div className="flex gap-4 mb-6">
-        <input
-          type="text" placeholder="Search cases..."
-          value={search} onChange={e => setSearch(e.target.value)}
-          className="border rounded-lg px-4 py-2 text-sm w-64"
+      <div className="flex items-center gap-4 mb-6">
+        <Input
+          type="text"
+          placeholder="Search by case # or claimant..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-72"
         />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="border rounded-lg px-4 py-2 text-sm">
-          <option value="all">All Statuses</option>
-          {Object.keys(STATUS_COLORS).map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-
-      {/* Cases Table */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="text-left px-6 py-3 font-medium text-gray-500">Case #</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-500">Claimant</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-500">State</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-500">Type</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-500">Amount</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-500">Status</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-500">Assigned</th>
-              <th className="text-left px-6 py-3 font-medium text-gray-500">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(c => (
-              <tr key={c.id} className="border-b hover:bg-gray-50 cursor-pointer">
-                <td className="px-6 py-4 font-mono text-xs">{c.caseNumber}</td>
-                <td className="px-6 py-4 font-medium">{c.claimantName}</td>
-                <td className="px-6 py-4">{c.state}</td>
-                <td className="px-6 py-4 text-xs">{c.sourceType.replace('_', ' ')}</td>
-                <td className="px-6 py-4">${c.amount.toLocaleString()}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[c.status] || 'bg-gray-100'}`}>
-                    {c.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-gray-500">{c.assignedTo || '—'}</td>
-                <td className="px-6 py-4">
-                  <a href={`/cases/${c.id}`} className="text-blue-600 hover:underline text-xs">View</a>
-                </td>
-              </tr>
+        <Select value={statusFilter} onValueChange={handleStatusChange}>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {CASE_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s.replace(/_/g, ' ')}
+              </SelectItem>
             ))}
-          </tbody>
-        </table>
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="mt-4 text-sm text-gray-500">
-        Showing {filtered.length} of {SAMPLE_CASES.length} cases
-      </div>
+      <DataTable<CaseRow>
+        columns={columns}
+        data={filtered}
+        totalCount={search.trim() ? filtered.length : total}
+        page={page}
+        limit={LIMIT}
+        onPageChange={setPage}
+        onRowClick={(row) => router.push(`/cases/${row.id}`)}
+        loading={isLoading}
+        emptyMessage="No cases found."
+      />
+
+      <CreateCaseDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSuccess={() => mutate()}
+      />
     </div>
   );
 }
