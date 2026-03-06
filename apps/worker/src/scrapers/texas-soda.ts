@@ -1,102 +1,136 @@
 import { BaseScraper } from './base.js';
 import type { ScrapedOpportunity, ScraperConfig } from './types.js';
+import puppeteer from 'puppeteer';
+import * as cheerio from 'cheerio';
 
-const DATASET_URL = 'https://data.texas.gov/resource/3un9-h9it.json';
-const SOURCE_PAGE = 'https://data.texas.gov/Government-and-Taxes/Texas-Unclaimed-Property-Listing/3un9-h9it';
+const SEARCH_URL = 'https://claimittexas.gov';
+
+const SEARCH_NAMES = [
+  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller',
+  'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Wilson',
+  'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee',
+];
 
 export class TexasSodaScraper extends BaseScraper {
-  readonly name = 'texas-soda';
-  private appToken: string | undefined;
+  readonly name = 'texas-up';
 
   constructor(config?: Partial<ScraperConfig>) {
     super({
       state: 'TX',
-      minDelayMs: 1000,
+      minDelayMs: 3000,
       maxRetries: 3,
-      timeoutMs: 30_000,
-      maxResults: 500,
+      timeoutMs: 60_000,
+      maxResults: 200,
       ...config,
     });
-    this.appToken = process.env.SOCRATA_APP_TOKEN;
   }
 
   async scrapeImpl(): Promise<ScrapedOpportunity[]> {
+    const browser = await puppeteer.launch({
+      headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    });
+
     const opportunities: ScrapedOpportunity[] = [];
-    const pageSize = 100;
-    let offset = 0;
 
-    while (opportunities.length < this.config.maxResults) {
-      const params = new URLSearchParams({
-        '$limit': String(pageSize),
-        '$offset': String(offset),
-        '$where': 'reported_value > 500',
-        '$order': 'reported_value DESC',
-      });
-
-      const headers: Record<string, string> = {
-        'Accept': 'application/json',
-      };
-      if (this.appToken) {
-        headers['X-App-Token'] = this.appToken;
-      }
-
-      const url = `${DATASET_URL}?${params}`;
-      this.log(`Fetching page at offset ${offset}...`);
-
-      const res = await this.fetchWithRetry(
-        () => fetch(url, {
-          headers,
-          signal: AbortSignal.timeout(this.config.timeoutMs),
-        }),
-        `SODA offset=${offset}`,
+    try {
+      const page = await browser.newPage();
+      await page.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
       );
 
-      const records: Record<string, unknown>[] = await res.json() as Record<string, unknown>[];
+      const namesToSearch = this.shuffleArray(SEARCH_NAMES).slice(0, 4);
 
-      if (records.length === 0) break;
+      for (const lastName of namesToSearch) {
+        if (opportunities.length >= this.config.maxResults) break;
 
-      for (const rec of records) {
-        const opp = this.mapRecord(rec);
-        if (opp) opportunities.push(opp);
+        try {
+          await this.throttle();
+          this.log(`Searching TX for: ${lastName}`);
+
+          await page.goto(SEARCH_URL, { waitUntil: 'networkidle2', timeout: this.config.timeoutMs });
+          await new Promise(r => setTimeout(r, 3000));
+
+          const input = await page.$('input[name="lastName"]')
+            ?? await page.$('input[id*="last"]')
+            ?? await page.$('input[placeholder*="Last"]')
+            ?? await page.$('input[type="text"]');
+
+          if (!input) {
+            this.errors.push('TX: Could not find search input');
+            continue;
+          }
+
+          await input.click({ clickCount: 3 });
+          await input.type(lastName, { delay: 50 });
+
+          const btn = await page.$('button[type="submit"]')
+            ?? await page.$('input[type="submit"]');
+
+          if (btn) {
+            await btn.click();
+            await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20_000 }).catch(() => null);
+            await new Promise(r => setTimeout(r, 3000));
+          }
+
+          const html = await page.content();
+          const results = this.parseResults(html, lastName);
+          opportunities.push(...results);
+          this.log(`TX: ${results.length} results for "${lastName}"`);
+        } catch (err) {
+          this.errors.push(`TX "${lastName}": ${err instanceof Error ? err.message : String(err)}`);
+        }
       }
-
-      this.log(`Got ${records.length} records (total: ${opportunities.length})`);
-
-      if (records.length < pageSize) break;
-      offset += pageSize;
+    } finally {
+      await browser.close();
     }
 
     return opportunities.slice(0, this.config.maxResults);
   }
 
-  private mapRecord(rec: Record<string, unknown>): ScrapedOpportunity | null {
-    const ownerName = String(rec.owner_name ?? rec.property_owner ?? rec.name ?? '').trim();
-    if (!ownerName) return null;
+  private parseResults(html: string, searchName: string): ScrapedOpportunity[] {
+    const $ = cheerio.load(html);
+    const results: ScrapedOpportunity[] = [];
 
-    const amount = parseFloat(String(rec.reported_value ?? rec.cash_reported ?? rec.amount ?? '0'));
-    if (isNaN(amount) || amount <= 0) return null;
+    $('table tbody tr, .search-result, [class*="result"]').each((_, el) => {
+      const cells = $(el).find('td');
+      if (cells.length >= 2) {
+        const name = $(cells[0]).text().trim();
+        const amountText = $(cells).last().text().trim().replace(/[$,]/g, '');
+        const amount = parseFloat(amountText);
 
-    const sourceId = String(
-      rec.up_id ?? rec.property_id ?? rec.id ?? `TX-${ownerName}-${amount}`,
-    );
+        if (name && !isNaN(amount) && amount > 0) {
+          results.push({
+            source_type: 'unclaimed_property',
+            source_id: `TX-UP-${name.replace(/\s+/g, '-')}-${amount}`,
+            source_url: SEARCH_URL,
+            state: 'TX',
+            county: null,
+            owner_name: name,
+            owner_address: null,
+            holder_name: cells.length > 2 ? $(cells[1]).text().trim() || null : null,
+            property_description: cells.length > 3 ? $(cells[2]).text().trim() || null : null,
+            reported_amount: amount,
+            parcel_number: null,
+            sale_date: null,
+            surplus_date: null,
+            deadline_date: null,
+            raw_data: { cells: cells.map((_, c) => $(c).text().trim()).get(), search_name: searchName, scraped_at: new Date().toISOString() },
+          });
+        }
+      }
+    });
 
-    return {
-      source_type: 'unclaimed_property',
-      source_id: `TX-SODA-${sourceId}`,
-      source_url: SOURCE_PAGE,
-      state: 'TX',
-      county: rec.county ? String(rec.county) : null,
-      owner_name: ownerName,
-      owner_address: [rec.address, rec.city, rec.state_code, rec.zip_code]
-        .filter(Boolean).map(String).join(', ') || null,
-      holder_name: rec.holder_name ? String(rec.holder_name) : null,
-      property_description: rec.property_type ? String(rec.property_type) : null,
-      reported_amount: amount,
-      parcel_number: null,
-      sale_date: null,
-      surplus_date: null,
-      deadline_date: null,
-      raw_data: rec,
-    };
+    return results;
+  }
+
+  private shuffleArray<T>(arr: T[]): T[] {
+    const copy = [...arr];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
   }
 }

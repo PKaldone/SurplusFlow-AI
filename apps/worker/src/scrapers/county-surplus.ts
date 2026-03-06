@@ -37,6 +37,7 @@ const COUNTY_SOURCES: CountyPDFSource[] = [
     state: 'TX',
     county: 'Harris',
     urls: [
+      'https://www.tax.co.harris.tx.us/ExcessProceeds',
       'https://www.hctx.net/HarrisCounty/ExcessProceeds',
     ],
     sourceType: 'tax_sale_surplus',
