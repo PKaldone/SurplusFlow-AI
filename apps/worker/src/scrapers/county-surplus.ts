@@ -1,6 +1,8 @@
 import { BaseScraper } from './base.js';
 import type { ScrapedOpportunity, ScraperConfig } from './types.js';
-import pdf from 'pdf-parse';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const pdf = require('pdf-parse') as (buffer: Buffer) => Promise<{ text: string }>;
 import * as cheerio from 'cheerio';
 
 interface CountyPDFSource {
