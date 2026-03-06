@@ -55,6 +55,18 @@ const STATUS_STYLES: Record<string, string> = {
   paid: "bg-green-100 text-green-700 border-green-200",
   overdue: "bg-red-100 text-red-700 border-red-200",
   waived: "bg-gray-100 text-gray-500 border-gray-200",
+  disputed: "bg-orange-100 text-orange-700 border-orange-200",
+
+  // Verification statuses
+  unverified: "bg-gray-100 text-gray-600 border-gray-200",
+  in_review: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  verified: "bg-green-100 text-green-700 border-green-200",
+  requires_update: "bg-orange-100 text-orange-700 border-orange-200",
+
+  // Evaluation results
+  ALLOWED: "bg-green-100 text-green-700 border-green-200",
+  ALLOWED_WITH_CONSTRAINTS: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  // BLOCKED already defined above in legacy statuses
 
   // Opportunity statuses
   new: "bg-blue-50 text-blue-700 border-blue-200",
