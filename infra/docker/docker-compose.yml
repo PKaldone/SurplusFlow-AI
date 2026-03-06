@@ -66,6 +66,96 @@ services:
       echo 'Buckets created';
       "
 
+  api:
+    build:
+      context: ../../
+      dockerfile: apps/api/Dockerfile
+    container_name: sf-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sfuser}:${POSTGRES_PASSWORD:-sfpass_local_dev}@postgres:5432/${POSTGRES_DB:-surplusflow}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-sfredis_local_dev}@redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ACCESS_KEY:-sfminio}
+      S3_SECRET_KEY: ${MINIO_SECRET_KEY:-sfminio_secret_local}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production-MUST-BE-32-chars!}
+      MAGIC_LINK_SECRET: ${MAGIC_LINK_SECRET:-dev-magic-link-secret-change-me!}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-dev-encryption-key-32-characters!}
+      SSN_ENCRYPTION_KEY: ${SSN_ENCRYPTION_KEY:-dev-ssn-key-32-characters-long!!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:3002}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      PORTAL_URL: ${PORTAL_URL:-http://localhost:3002}
+    ports:
+      - "${API_PORT:-3001}:3001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build:
+      context: ../../
+      dockerfile: apps/worker/Dockerfile
+    container_name: sf-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sfuser}:${POSTGRES_PASSWORD:-sfpass_local_dev}@postgres:5432/${POSTGRES_DB:-surplusflow}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-sfredis_local_dev}@redis:6379
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ACCESS_KEY:-sfminio}
+      S3_SECRET_KEY: ${MINIO_SECRET_KEY:-sfminio_secret_local}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-dev-encryption-key-32-characters!}
+    restart: unless-stopped
+
+  admin-web:
+    build:
+      context: ../../
+      dockerfile: apps/admin-web/Dockerfile
+    container_name: sf-admin
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
+    ports:
+      - "${ADMIN_PORT:-3100}:3000"
+    restart: unless-stopped
+
+  portal-web:
+    build:
+      context: ../../
+      dockerfile: apps/portal-web/Dockerfile
+    container_name: sf-portal
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      HOSTNAME: "0.0.0.0"
+      PORT: "3002"
+    ports:
+      - "${PORTAL_PORT:-3101}:3002"
+    restart: unless-stopped
+
 volumes:
   pgdata:
   redisdata:
