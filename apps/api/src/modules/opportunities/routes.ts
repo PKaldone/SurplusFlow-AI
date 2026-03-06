@@ -3,7 +3,19 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify';
+import { Queue } from 'bullmq';
 import { query } from '../../lib/db.js';
+
+// --- BullMQ queue for triggering ingestion jobs from the API ---
+const REDIS_URL = process.env.REDIS_URL || 'redis://:sfredis_local_dev@localhost:6379';
+const parsedRedis = new URL(REDIS_URL);
+const ingestionQueue = new Queue('ingestion', {
+  connection: {
+    host: parsedRedis.hostname,
+    port: parseInt(parsedRedis.port || '6379', 10),
+    password: parsedRedis.password || undefined,
+  },
+});
 
 export async function opportunityRoutes(app: FastifyInstance) {
   app.get('/', {
@@ -141,5 +153,39 @@ export async function opportunityRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     // Run evaluateJurisdiction from rules engine
     return reply.send({ id, ruleCheck: { result: 'ALLOWED_WITH_CONSTRAINTS', constraints: [], warnings: [] } });
+  });
+
+  // --- Trigger autonomous scrape pipeline ---
+  app.post('/trigger-scrape', {
+    preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops'])],
+  }, async (request, reply) => {
+    const { states } = request.body as { states?: string[] };
+    const SUPPORTED_STATES = ['FL', 'TX', 'CA', 'OH', 'NY'];
+    const targetStates = states ?? SUPPORTED_STATES;
+
+    // Validate requested states
+    const invalid = targetStates.filter(s => !SUPPORTED_STATES.includes(s));
+    if (invalid.length > 0) {
+      return reply.status(400).send({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: `Unsupported states: ${invalid.join(', ')}. Supported: ${SUPPORTED_STATES.join(', ')}`,
+      });
+    }
+
+    const jobs = await Promise.all(
+      targetStates.map(state =>
+        ingestionQueue.add('scrape-state-surplus', {
+          type: 'scrape-state-surplus',
+          data: { state, triggeredBy: request.user!.sub },
+        }),
+      ),
+    );
+
+    return reply.send({
+      message: `Scrape triggered for ${targetStates.length} states`,
+      states: targetStates,
+      jobIds: jobs.map(j => j.id),
+    });
   });
 }
