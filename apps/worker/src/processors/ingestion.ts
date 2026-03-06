@@ -5,7 +5,7 @@
 import { Job, Queue } from 'bullmq';
 import crypto from 'node:crypto';
 import { QUEUES, CASE_NUMBER_PREFIX } from '@surplusflow/shared';
-import { query } from '../lib/db.js';
+import { query, pool } from '../lib/db.js';
 
 // ---------------------------------------------------------------------------
 // Redis connection (mirrors worker/src/index.ts)
@@ -362,43 +362,59 @@ async function autoEnroll(job: Job): Promise<AutoEnrollResult> {
     claimantId = newClaimantId;
   }
 
-  // 4. Generate case_number: SF-{year}-{sequential 4-digit}
-  //    Mirrors the pattern in cases/routes.ts (COUNT-based)
+  // 4. Generate case_number + insert in a single transaction with advisory lock
+  //    to prevent race conditions on concurrent auto-enroll jobs
   const year = new Date().getFullYear();
   const prefix = `${CASE_NUMBER_PREFIX}-${year}-`;
-  const countResult = await query<{ count: string }>(
-    `SELECT MAX(CAST(SUBSTRING(case_number FROM '[0-9]+$') AS INTEGER)) AS max_seq FROM claim_cases WHERE case_number LIKE $1`,
-    [`${prefix}%`],
-  );
-  const nextSeq = (parseInt(countResult.rows[0].max_seq, 10) || 0) + 1;
-  const caseNumber = `${prefix}${String(nextSeq).padStart(4, '0')}`;
-
-  // 5. Insert into claim_cases
   const caseId = crypto.randomUUID();
-  await query(
-    `INSERT INTO claim_cases (
-      id, case_number, opportunity_id, claimant_id, status,
-      source_type, jurisdiction_key, state, county,
-      claimed_amount, attorney_required, notarization_required,
-      assignment_enabled, metadata, created_at, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, 'PROSPECT',
-      $5, $6, $7, $8,
-      $9, false, false,
-      false, $10, NOW(), NOW()
-    )`,
-    [
-      caseId, caseNumber, opportunityId, claimantId,
-      opp.source_type, opp.jurisdiction_key, opp.state, opp.county,
-      opp.reported_amount,
-      JSON.stringify({ auto_enrolled: true, enrolled_at: new Date().toISOString() }),
-    ],
-  );
 
-  // 6. Insert into case_status_history
+  const client = await pool.connect();
+  let caseNumber: string;
+  try {
+    await client.query('BEGIN');
+    // Advisory lock keyed on a fixed hash to serialize case number generation
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('case_number_gen'))`);
+
+    const countResult = await client.query<{ max_seq: string }>(
+      `SELECT MAX(CAST(SUBSTRING(case_number FROM '[0-9]+$') AS INTEGER)) AS max_seq FROM claim_cases WHERE case_number LIKE $1`,
+      [`${prefix}%`],
+    );
+    const nextSeq = (parseInt(countResult.rows[0].max_seq, 10) || 0) + 1;
+    caseNumber = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+
+    // 5. Insert into claim_cases
+    await client.query(
+      `INSERT INTO claim_cases (
+        id, case_number, opportunity_id, claimant_id, status,
+        source_type, jurisdiction_key, state, county,
+        claimed_amount, attorney_required, notarization_required,
+        assignment_enabled, metadata, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, 'PROSPECT',
+        $5, $6, $7, $8,
+        $9, false, false,
+        false, $10, NOW(), NOW()
+      )`,
+      [
+        caseId, caseNumber, opportunityId, claimantId,
+        opp.source_type, opp.jurisdiction_key, opp.state, opp.county,
+        opp.reported_amount,
+        JSON.stringify({ auto_enrolled: true, enrolled_at: new Date().toISOString() }),
+      ],
+    );
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  // 6. Insert into case_status_history (changed_by is NULL for system actions — column is UUID FK)
   await query(
     `INSERT INTO case_status_history (case_id, from_status, to_status, changed_by, reason, created_at)
-     VALUES ($1, NULL, 'PROSPECT', 'system', 'Auto-enrolled from ingestion pipeline', NOW())`,
+     VALUES ($1, NULL, 'PROSPECT', NULL, 'Auto-enrolled from ingestion pipeline', NOW())`,
     [caseId],
   );
 
