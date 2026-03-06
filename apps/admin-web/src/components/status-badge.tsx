@@ -61,6 +61,13 @@ const STATUS_STYLES: Record<string, string> = {
   matched: "bg-purple-100 text-purple-700 border-purple-200",
   case_created: "bg-green-100 text-green-700 border-green-200",
   expired: "bg-gray-100 text-gray-500 border-gray-200",
+
+  // Suppression reasons
+  opt_out: "bg-amber-100 text-amber-700 border-amber-200",
+  do_not_contact: "bg-red-100 text-red-700 border-red-200",
+  complaint: "bg-orange-100 text-orange-700 border-orange-200",
+  legal_hold: "bg-purple-100 text-purple-700 border-purple-200",
+  duplicate: "bg-gray-100 text-gray-500 border-gray-200",
 };
 
 function formatLabel(status: string): string {
