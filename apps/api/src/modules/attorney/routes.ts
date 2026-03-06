@@ -10,22 +10,29 @@ export async function attorneyRoutes(app: FastifyInstance) {
   app.get('/assignments', {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'attorney'])],
   }, async (request, reply) => {
-    const attorneyId = request.user!.sub;
+    const userRole = request.user!.role;
+    const userId = request.user!.sub;
     const { page: rawPage, pageSize: rawPageSize, status } = request.query as Record<string, string>;
     const page = Math.max(1, parseInt(rawPage, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(rawPageSize, 10) || 25));
     const offset = (page - 1) * pageSize;
 
-    const conditions: string[] = ['a.attorney_id = $1'];
-    const params: unknown[] = [attorneyId];
-    let paramIdx = 2;
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let paramIdx = 1;
+
+    // Attorneys see only their own; admins see all
+    if (userRole === 'attorney') {
+      conditions.push(`a.attorney_id = $${paramIdx++}`);
+      params.push(userId);
+    }
 
     if (status) {
       conditions.push(`a.status = $${paramIdx++}`);
       params.push(status);
     }
 
-    const where = `WHERE ${conditions.join(' AND ')}`;
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const countResult = await query<{ count: string }>(
       `SELECT COUNT(*) AS count FROM attorney_assignments a ${where}`,
@@ -35,7 +42,7 @@ export async function attorneyRoutes(app: FastifyInstance) {
 
     const dataResult = await query(
       `SELECT a.*, cc.case_number, cc.status AS case_status,
-              cc.source_type, cc.jurisdiction_key, cc.estimated_amount
+              cc.source_type, cc.jurisdiction_key, cc.claimed_amount
        FROM attorney_assignments a
        LEFT JOIN claim_cases cc ON cc.id = a.case_id
        ${where}
@@ -57,16 +64,20 @@ export async function attorneyRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'attorney'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const attorneyId = request.user!.sub;
+    const userRole = request.user!.role;
+    const userId = request.user!.sub;
+
+    const ownerFilter = userRole === 'attorney' ? ' AND a.attorney_id = $2' : '';
+    const params = userRole === 'attorney' ? [id, userId] : [id];
 
     const result = await query(
       `SELECT a.*, cc.case_number, cc.status AS case_status,
-              cc.source_type, cc.jurisdiction_key, cc.estimated_amount,
+              cc.source_type, cc.jurisdiction_key, cc.claimed_amount,
               cc.claimant_id
        FROM attorney_assignments a
        LEFT JOIN claim_cases cc ON cc.id = a.case_id
-       WHERE a.id = $1 AND a.attorney_id = $2`,
-      [id, attorneyId],
+       WHERE a.id = $1${ownerFilter}`,
+      params,
     );
 
     if (result.rowCount === 0) {

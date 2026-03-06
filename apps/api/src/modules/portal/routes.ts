@@ -78,8 +78,7 @@ export async function portalRoutes(app: FastifyInstance) {
     const dataResult = await query(
       `SELECT cc.id, cc.case_number, cc.status, cc.source_type,
               cc.jurisdiction_key, cc.state, cc.county,
-              cc.claimed_amount, cc.surplus_amount,
-              cc.agreed_fee_pct, cc.agreed_fee_cap,
+              cc.claimed_amount,               cc.agreed_fee_pct, cc.agreed_fee_cap,
               cc.cooling_off_days, cc.contract_version,
               cc.created_at, cc.updated_at
        FROM claim_cases cc
@@ -113,8 +112,7 @@ export async function portalRoutes(app: FastifyInstance) {
     const result = await query(
       `SELECT cc.id, cc.case_number, cc.status, cc.previous_status,
               cc.source_type, cc.jurisdiction_key, cc.state, cc.county,
-              cc.claimed_amount, cc.surplus_amount,
-              cc.agreed_fee_pct, cc.agreed_fee_cap,
+              cc.claimed_amount,               cc.agreed_fee_pct, cc.agreed_fee_cap,
               cc.cooling_off_days, cc.contract_version,
               cc.attorney_required, cc.notarization_required,
               cc.payout_amount, cc.payout_date,

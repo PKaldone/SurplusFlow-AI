@@ -228,7 +228,7 @@ export async function outreachRoutes(app: FastifyInstance) {
     let paramIdx = 1;
 
     if (channel) {
-      conditions.push(`channel = $${paramIdx++}`);
+      conditions.push(`source_type = $${paramIdx++}`);
       params.push(channel);
     }
 
@@ -241,7 +241,8 @@ export async function outreachRoutes(app: FastifyInstance) {
     const total = parseInt(countResult.rows[0].count, 10);
 
     const dataResult = await query(
-      `SELECT id, name, channel, description, body, subject, created_at AS "createdAt"
+      `SELECT id, title AS name, source_type AS channel, template_key AS description,
+              body_template AS body, jurisdiction_key AS subject, created_at AS "createdAt"
        FROM contract_templates ${where}
        ORDER BY created_at DESC
        LIMIT $${paramIdx++} OFFSET $${paramIdx++}`,
