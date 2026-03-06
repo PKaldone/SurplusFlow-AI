@@ -176,8 +176,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
     const jobs = await Promise.all(
       targetStates.map(state =>
         ingestionQueue.add('scrape-state-surplus', {
-          type: 'scrape-state-surplus',
-          data: { state, triggeredBy: request.user!.sub },
+          state, triggeredBy: request.user!.sub,
         }),
       ),
     );

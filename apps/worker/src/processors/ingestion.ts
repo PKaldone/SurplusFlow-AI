@@ -308,7 +308,7 @@ interface AutoEnrollResult {
 }
 
 async function autoEnroll(job: Job): Promise<AutoEnrollResult> {
-  const { opportunityId } = job.data.data as { opportunityId: string };
+  const { opportunityId } = (job.data.data ?? job.data) as { opportunityId: string };
 
   // 1. Fetch the opportunity
   const oppResult = await query<{
@@ -444,7 +444,7 @@ async function autoEnroll(job: Job): Promise<AutoEnrollResult> {
 // ---------------------------------------------------------------------------
 
 async function importCsv(job: Job): Promise<{ message: string }> {
-  const { filename } = job.data.data as { filename?: string };
+  const { filename } = (job.data.data ?? job.data) as { filename?: string };
   console.log(`[Ingestion] CSV import requested: ${filename ?? 'unknown'}. Stub — returning success.`);
   return { message: `CSV import stub completed for ${filename ?? 'unknown'}` };
 }
