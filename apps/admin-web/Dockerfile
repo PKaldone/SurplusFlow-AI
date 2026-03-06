@@ -13,8 +13,7 @@ RUN npm ci --ignore-scripts
 COPY tsconfig.json ./
 COPY packages/shared/ packages/shared/
 COPY apps/admin-web/ apps/admin-web/
-RUN npm run build --workspace=packages/shared && \
-    npm run build --workspace=apps/admin-web
+RUN cd apps/admin-web && npx next build
 
 FROM node:20-alpine
 WORKDIR /app

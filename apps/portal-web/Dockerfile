@@ -13,8 +13,7 @@ RUN npm ci --ignore-scripts
 COPY tsconfig.json ./
 COPY packages/shared/ packages/shared/
 COPY apps/portal-web/ apps/portal-web/
-RUN npm run build --workspace=packages/shared && \
-    npm run build --workspace=apps/portal-web
+RUN cd apps/portal-web && npx next build
 
 FROM node:20-alpine
 WORKDIR /app
