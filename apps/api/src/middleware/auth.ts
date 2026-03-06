@@ -70,10 +70,10 @@ async function authPluginImpl(app: FastifyInstance) {
    */
   app.decorate('generateTokens', function (payload: { sub: string; email: string; role: UserRole }) {
     const accessToken = jwt.sign(payload, config.JWT_SECRET, {
-      expiresIn: config.JWT_EXPIRES_IN,
+      expiresIn: config.JWT_EXPIRES_IN as string & jwt.SignOptions['expiresIn'],
     });
     const refreshToken = jwt.sign({ sub: payload.sub, type: 'refresh' }, config.JWT_SECRET, {
-      expiresIn: config.JWT_REFRESH_EXPIRES_IN,
+      expiresIn: config.JWT_REFRESH_EXPIRES_IN as string & jwt.SignOptions['expiresIn'],
     });
     return { accessToken, refreshToken, expiresIn: 900 }; // 15min in seconds
   });

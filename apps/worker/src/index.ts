@@ -4,7 +4,7 @@
 // ============================================================
 
 import { Worker, Queue } from 'bullmq';
-import IORedis from 'ioredis';
+import Redis from 'ioredis';
 import { QUEUES } from '@surplusflow/shared';
 import { processIngestion } from './processors/ingestion.js';
 import { processDocgen } from './processors/docgen.js';
@@ -13,7 +13,7 @@ import { processCompliance } from './processors/compliance.js';
 import { processFollowups } from './processors/followups.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://:sfredis_local_dev@localhost:6379';
-const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+const connection = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 
 // --- Create Queues (for enqueuing from API) ---
 export const queues = {
@@ -30,27 +30,27 @@ export const queues = {
 
 const ingestionWorker = new Worker(QUEUES.INGESTION, processIngestion, {
   connection, concurrency: 3,
-  defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+  removeOnComplete: { count: 100 },
 });
 
 const docgenWorker = new Worker(QUEUES.DOCGEN, processDocgen, {
   connection, concurrency: 2,
-  defaultJobOptions: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } },
+  removeOnComplete: { count: 100 },
 });
 
 const outreachWorker = new Worker(QUEUES.OUTREACH, processOutreach, {
   connection, concurrency: 5,
-  defaultJobOptions: { attempts: 2, backoff: { type: 'exponential', delay: 3000 } },
+  removeOnComplete: { count: 100 },
 });
 
 const complianceWorker = new Worker(QUEUES.COMPLIANCE, processCompliance, {
   connection, concurrency: 3,
-  defaultJobOptions: { attempts: 1 },
+  removeOnComplete: { count: 100 },
 });
 
 const followupsWorker = new Worker(QUEUES.FOLLOWUPS, processFollowups, {
   connection, concurrency: 2,
-  defaultJobOptions: { attempts: 2, backoff: { type: 'exponential', delay: 10000 } },
+  removeOnComplete: { count: 100 },
 });
 
 // --- Event Logging ---

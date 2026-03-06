@@ -27,11 +27,10 @@ export async function outreachRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'compliance'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const payload = request.body as Record<string, unknown>;
-    payload.campaignId = id;
-    payload.approvedBy = request.user!.sub;
+    const body = request.body as Record<string, unknown>;
+    const payload = { ...body, campaignId: id, approvedBy: request.user!.sub };
 
-    const validation = validateApproval(payload);
+    const validation = validateApproval(payload as Parameters<typeof validateApproval>[0]);
     if (!validation.valid) {
       return reply.status(400).send({ statusCode: 400, error: 'Approval Incomplete', message: 'All approval checkboxes must be confirmed', details: validation.errors });
     }
