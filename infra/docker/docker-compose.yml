@@ -136,6 +136,7 @@ services:
       NODE_ENV: production
       HOSTNAME: "0.0.0.0"
       PORT: "3000"
+      API_URL: "http://api:3001"
     ports:
       - "${ADMIN_PORT:-3100}:3000"
     restart: unless-stopped
@@ -152,6 +153,7 @@ services:
       NODE_ENV: production
       HOSTNAME: "0.0.0.0"
       PORT: "3002"
+      API_URL: "http://api:3001"
     ports:
       - "${PORTAL_PORT:-3101}:3002"
     restart: unless-stopped
