@@ -312,7 +312,7 @@ BEGIN
     INSERT INTO claim_cases (id, case_number, opportunity_id, claimant_id, assigned_to, status, previous_status, source_type, jurisdiction_key, state, county, claimed_amount, agreed_fee_pct, contract_version, contract_signed_at, cooling_off_days, assignment_enabled, created_at, updated_at)
     VALUES (v_cs3, 'SF-2026-0003', v_op3, v_cl3, v_ops_id, 'PACKET_ASSEMBLY', 'ENROLLED',
         'tax_sale_surplus', 'TX_taxsale', 'TX', 'Dallas', 22500.00, 25.00,
-        'v1.8', '2026-01-05T11:00:00Z', NULL, 0, TRUE,
+        'v1.8', '2026-01-05T11:00:00Z', 0, TRUE,
         '2025-12-28T15:00:00Z', '2026-01-10T16:00:00Z')
     ON CONFLICT (case_number) DO NOTHING;
     IF NOT FOUND THEN SELECT id INTO v_cs3 FROM claim_cases WHERE case_number = 'SF-2026-0003'; END IF;
@@ -356,7 +356,7 @@ BEGIN
     INSERT INTO claim_cases (id, case_number, opportunity_id, claimant_id, assigned_to, status, previous_status, source_type, jurisdiction_key, state, county, claimed_amount, agreed_fee_pct, contract_version, contract_signed_at, cooling_off_days, assignment_enabled, submitted_at, payout_amount, payout_date, payout_confirmed_at, fee_amount, fee_invoiced_at, fee_collected_at, closed_at, closed_reason, created_at, updated_at)
     VALUES (v_cs7, 'SF-2026-0007', v_op8, v_cl8, v_ops_id, 'CLOSED', 'INVOICED',
         'tax_sale_surplus', 'TX_taxsale', 'TX', 'Harris', 15800.00, 30.00,
-        'v1.8', '2025-10-20T11:00:00Z', NULL, 0, TRUE,
+        'v1.8', '2025-10-20T11:00:00Z', 0, TRUE,
         '2025-11-05T09:00:00Z', 15800.00, '2026-01-10', '2026-01-10T14:00:00Z',
         4740.00, '2026-01-12T10:00:00Z', '2026-01-25T16:30:00Z',
         '2026-01-30T09:00:00Z', 'Fee collected — case complete',
