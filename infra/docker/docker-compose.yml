@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-sfuser}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sfpass_local_dev}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-3102}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
@@ -22,7 +22,7 @@ services:
     container_name: sf-redis
     command: redis-server --requirepass ${REDIS_PASSWORD:-sfredis_local_dev}
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -39,8 +39,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-sfminio}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-sfminio_secret_local}
     ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "${MINIO_PORT:-9002}:9000"
+      - "${MINIO_CONSOLE_PORT:-9003}:9001"
     volumes:
       - miniodata:/data
     healthcheck:
