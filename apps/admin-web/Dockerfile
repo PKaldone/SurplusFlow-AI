@@ -13,6 +13,8 @@ RUN npm ci --ignore-scripts
 COPY tsconfig.json ./
 COPY packages/shared/ packages/shared/
 COPY apps/admin-web/ apps/admin-web/
+ARG API_URL=http://localhost:3001
+ENV API_URL=${API_URL}
 RUN cd apps/admin-web && npx next build
 
 FROM node:20-alpine
