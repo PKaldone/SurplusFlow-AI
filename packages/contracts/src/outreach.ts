@@ -76,7 +76,7 @@ export const STOP_RULES: OutreachStopRule[] = [
   {
     code: 'CASE_NOT_ACTIVE',
     description: 'Case is in a terminal or non-outreach status',
-    check: (ctx) => ['ENROLLED', 'SUBMITTED', 'CLOSED', 'WITHDRAWN', 'BLOCKED', 'DENIED', 'RESCINDED'].includes(ctx.caseStatus),
+    check: (ctx) => ['CLOSED', 'WITHDRAWN', 'BLOCKED', 'DENIED', 'RESCINDED'].includes(ctx.caseStatus),
   },
   {
     code: 'SUPPRESSION_LIST',

@@ -159,7 +159,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
   app.post('/trigger-scrape', {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops'])],
   }, async (request, reply) => {
-    const { states } = request.body as { states?: string[] };
+    const { states } = (request.body ?? {}) as { states?: string[] };
     const SUPPORTED_STATES = ['FL', 'TX', 'CA', 'OH', 'NY'];
     const targetStates = states ?? SUPPORTED_STATES;
 

@@ -205,11 +205,11 @@ async function handleRuleCheck(data: { caseId: string }): Promise<void> {
     [caseId, JSON.stringify(evaluationMeta)],
   );
 
-  // If case is PROSPECT, transition to ENROLLED
+  // If case is PROSPECT, transition to OUTREACH (ready for first contact)
   if (caseRow.status === 'PROSPECT') {
     await query(
       `UPDATE claim_cases
-       SET status = 'ENROLLED', previous_status = $2, updated_at = NOW()
+       SET status = 'OUTREACH', previous_status = $2, updated_at = NOW()
        WHERE id = $1`,
       [caseId, caseRow.status],
     );
@@ -217,8 +217,8 @@ async function handleRuleCheck(data: { caseId: string }): Promise<void> {
     await insertStatusHistory(
       caseId,
       caseRow.status,
-      'ENROLLED',
-      `Rule check passed (${evaluation.result}). Auto-enrolled.`,
+      'OUTREACH',
+      `Rule check passed (${evaluation.result}). Ready for outreach.`,
     );
 
     // Queue first outreach touch
@@ -227,7 +227,7 @@ async function handleRuleCheck(data: { caseId: string }): Promise<void> {
       data: { caseId, touchNumber: 1 },
     });
 
-    console.log(`[Compliance] Case ${caseRow.case_number} enrolled, outreach queued.`);
+    console.log(`[Compliance] Case ${caseRow.case_number} moved to OUTREACH, first touch queued.`);
   }
 
   await insertAuditLog(
