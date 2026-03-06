@@ -6,6 +6,7 @@ import { Job, Queue } from 'bullmq';
 import crypto from 'node:crypto';
 import { QUEUES, CASE_NUMBER_PREFIX } from '@surplusflow/shared';
 import { query, pool } from '../lib/db.js';
+import { getScrapersForState } from '../scrapers/index.js';
 
 // ---------------------------------------------------------------------------
 // Redis connection (mirrors worker/src/index.ts)
@@ -24,150 +25,11 @@ const ingestionQueue = new Queue(QUEUES.INGESTION, { connection });
 const complianceQueue = new Queue(QUEUES.COMPLIANCE, { connection });
 
 // ---------------------------------------------------------------------------
-// State configuration — realistic counties & source types per state
+// Helpers
 // ---------------------------------------------------------------------------
 
-interface StateConfig {
-  readonly state: string;
-  readonly counties: readonly string[];
-  readonly sourceTypes: readonly SourceTypeOption[];
-  readonly holders: readonly string[];
-  readonly amountRange: readonly [number, number];
-}
-
-type SourceTypeOption = 'unclaimed_property' | 'tax_sale_surplus' | 'foreclosure_surplus';
-
-const STATE_CONFIGS: Record<string, StateConfig> = {
-  FL: {
-    state: 'FL',
-    counties: ['Miami-Dade', 'Broward', 'Palm Beach', 'Orange', 'Hillsborough'],
-    sourceTypes: ['unclaimed_property', 'foreclosure_surplus'],
-    holders: [
-      'Florida Department of Financial Services',
-      'Clerk of the Circuit Court',
-      'County Tax Collector',
-    ],
-    amountRange: [800, 150_000],
-  },
-  TX: {
-    state: 'TX',
-    counties: ['Harris', 'Dallas', 'Tarrant', 'Bexar', 'Travis'],
-    sourceTypes: ['tax_sale_surplus', 'unclaimed_property'],
-    holders: [
-      'Texas Comptroller of Public Accounts',
-      'County Tax Assessor-Collector',
-      'District Clerk',
-    ],
-    amountRange: [500, 120_000],
-  },
-  CA: {
-    state: 'CA',
-    counties: ['Los Angeles', 'San Francisco', 'San Diego', 'Orange', 'Sacramento'],
-    sourceTypes: ['foreclosure_surplus', 'unclaimed_property'],
-    holders: [
-      'California State Controller',
-      'County Treasurer-Tax Collector',
-      'Superior Court of California',
-    ],
-    amountRange: [1_000, 150_000],
-  },
-  OH: {
-    state: 'OH',
-    counties: ['Cuyahoga', 'Franklin', 'Hamilton', 'Summit', 'Montgomery'],
-    sourceTypes: ['unclaimed_property', 'tax_sale_surplus'],
-    holders: [
-      'Ohio Department of Commerce',
-      'County Auditor',
-      'County Treasurer',
-    ],
-    amountRange: [500, 80_000],
-  },
-  NY: {
-    state: 'NY',
-    counties: ['Kings', 'Queens', 'New York', 'Suffolk', 'Nassau'],
-    sourceTypes: ['foreclosure_surplus', 'unclaimed_property'],
-    holders: [
-      'New York State Comptroller',
-      'NYC Department of Finance',
-      'County Clerk',
-    ],
-    amountRange: [1_500, 150_000],
-  },
-} as const;
-
-// ---------------------------------------------------------------------------
-// Realistic data generators
-// ---------------------------------------------------------------------------
-
-const FIRST_NAMES = [
-  'James', 'Mary', 'Robert', 'Patricia', 'John', 'Jennifer', 'Michael', 'Linda',
-  'David', 'Elizabeth', 'William', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica',
-  'Thomas', 'Sarah', 'Christopher', 'Karen', 'Charles', 'Lisa', 'Daniel', 'Nancy',
-  'Matthew', 'Betty', 'Anthony', 'Margaret', 'Mark', 'Sandra', 'Donald', 'Ashley',
-  'Steven', 'Dorothy', 'Andrew', 'Kimberly', 'Paul', 'Emily', 'Joshua', 'Donna',
-] as const;
-
-const LAST_NAMES = [
-  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis',
-  'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson',
-  'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson',
-  'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson', 'Walker',
-  'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
-] as const;
-
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function randomElement<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randomAmount(min: number, max: number): number {
-  // Skew toward lower amounts (more realistic distribution)
-  const raw = Math.random() ** 1.5;
-  return Math.round((min + raw * (max - min)) * 100) / 100;
-}
-
-function generateSourceId(state: string, sourceType: SourceTypeOption): string {
-  const year = new Date().getFullYear();
-  const suffix = randomInt(100_000, 999_999);
-  const prefixMap: Record<SourceTypeOption, string> = {
-    unclaimed_property: 'UP',
-    tax_sale_surplus: 'TS',
-    foreclosure_surplus: 'FS',
-  };
-  return `${state}-${prefixMap[sourceType]}-${year}-${suffix}`;
-}
-
-function generatePropertyDescription(sourceType: SourceTypeOption, county: string): string {
-  const descriptions: Record<SourceTypeOption, readonly string[]> = {
-    unclaimed_property: [
-      `Unclaimed funds from dormant account held by financial institution in ${county} County`,
-      `Unclaimed insurance proceeds originally payable to property owner in ${county} County`,
-      `Unclaimed utility deposit refund from ${county} County service provider`,
-      `Unclaimed estate distribution from probate court in ${county} County`,
-      `Unclaimed mineral rights royalty payment — ${county} County`,
-    ],
-    tax_sale_surplus: [
-      `Tax sale surplus from delinquent property tax auction in ${county} County`,
-      `Excess proceeds from county tax lien foreclosure sale — ${county} County`,
-      `Surplus funds from tax deed sale, parcel in ${county} County`,
-      `Overage from ${county} County annual tax sale`,
-    ],
-    foreclosure_surplus: [
-      `Foreclosure surplus from mortgage default sale in ${county} County`,
-      `Excess proceeds from judicial foreclosure — ${county} County Circuit Court`,
-      `Surplus funds from trustee sale following default in ${county} County`,
-      `Foreclosure overage held by ${county} County Clerk of Court`,
-    ],
-  };
-
-  return randomElement(descriptions[sourceType]);
-}
-
-function buildJurisdictionKey(state: string, county: string, sourceType: SourceTypeOption): string {
-  const sanitized = county.toLowerCase().replace(/[^a-z0-9]/g, '_');
+function buildJurisdictionKey(state: string, county: string | null, sourceType: string): string {
+  const sanitized = (county ?? 'statewide').toLowerCase().replace(/[^a-z0-9]/g, '_');
   return `${state.toLowerCase()}_${sanitized}_${sourceType}`;
 }
 
@@ -185,102 +47,83 @@ interface ScrapeResult {
 
 async function scrapeStateSurplus(job: Job): Promise<ScrapeResult> {
   const { state, triggeredBy } = job.data as { state: string; triggeredBy?: string };
-  const cfg = STATE_CONFIGS[state];
 
-  if (!cfg) {
-    throw new Error(`No configuration for state: ${state}. Supported: ${Object.keys(STATE_CONFIGS).join(', ')}`);
-  }
-
+  const scrapers = getScrapersForState(state);
   const batchId = `batch-${state}-${Date.now()}`;
-  const opportunityCount = randomInt(3, 8);
-  const opportunities: Array<{
-    id: string;
-    source_type: SourceTypeOption;
-    source_id: string;
-    state: string;
-    county: string;
-    jurisdiction_key: string;
-    reported_amount: number;
-    owner_name: string;
-    holder_name: string;
-    property_description: string;
-    ingestion_batch: string;
-    raw_data: string;
-  }> = [];
 
-  // Generate realistic opportunities
-  for (let i = 0; i < opportunityCount; i++) {
-    const sourceType = randomElement(cfg.sourceTypes);
-    const county = randomElement(cfg.counties);
-    const firstName = randomElement(FIRST_NAMES);
-    const lastName = randomElement(LAST_NAMES);
-
-    opportunities.push({
-      id: crypto.randomUUID(),
-      source_type: sourceType,
-      source_id: generateSourceId(state, sourceType),
-      state: cfg.state,
-      county,
-      jurisdiction_key: buildJurisdictionKey(cfg.state, county, sourceType),
-      reported_amount: randomAmount(cfg.amountRange[0], cfg.amountRange[1]),
-      owner_name: `${firstName} ${lastName}`,
-      holder_name: randomElement(cfg.holders),
-      property_description: generatePropertyDescription(sourceType, county),
-      ingestion_batch: batchId,
-      raw_data: JSON.stringify({
-        scraped_at: new Date().toISOString(),
-        triggered_by: triggeredBy ?? 'system',
-        simulated: true,
-      }),
-    });
-  }
-
-  // Bulk insert with deduplication (ON CONFLICT DO NOTHING)
+  let totalFound = 0;
   let inserted = 0;
   let jobsQueued = 0;
+  const allErrors: string[] = [];
 
-  for (const opp of opportunities) {
-    const result = await query<{ id: string }>(
-      `INSERT INTO opportunities (
-        id, source_type, source_id, state, county, jurisdiction_key,
-        reported_amount, owner_name, holder_name, property_description,
-        ingestion_batch, raw_data, status, created_at, updated_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10,
-        $11, $12, 'new', NOW(), NOW()
-      )
-      ON CONFLICT (source_type, source_id) DO NOTHING
-      RETURNING id`,
-      [
-        opp.id, opp.source_type, opp.source_id, opp.state, opp.county,
-        opp.jurisdiction_key, opp.reported_amount, opp.owner_name,
-        opp.holder_name, opp.property_description, opp.ingestion_batch,
-        opp.raw_data,
-      ],
-    );
+  for (const scraper of scrapers) {
+    try {
+      const result = await scraper.scrape();
+      totalFound += result.found;
+      allErrors.push(...result.errors);
 
-    if (result.rowCount && result.rowCount > 0) {
-      inserted++;
-      const insertedId = result.rows[0].id;
+      console.log(
+        `[Ingestion] ${scraper.name}: ${result.found} found in ${result.durationMs}ms` +
+        (result.errors.length ? ` (${result.errors.length} errors)` : ''),
+      );
 
-      // Queue auto-enroll (compliance check happens after case is created)
-      await ingestionQueue.add('auto-enroll', {
-        opportunityId: insertedId,
-      });
+      for (const opp of result.opportunities) {
+        const id = crypto.randomUUID();
+        const jurisdictionKey = buildJurisdictionKey(opp.state, opp.county, opp.source_type);
 
-      jobsQueued += 1;
+        const dbResult = await query<{ id: string }>(
+          `INSERT INTO opportunities (
+            id, source_type, source_id, source_url, state, county, jurisdiction_key,
+            reported_amount, owner_name, owner_address, holder_name, property_description,
+            parcel_number, sale_date, surplus_date, deadline_date,
+            ingestion_batch, raw_data, status, created_at, updated_at
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7,
+            $8, $9, $10, $11, $12,
+            $13, $14, $15, $16,
+            $17, $18, 'new', NOW(), NOW()
+          )
+          ON CONFLICT (source_type, source_id) DO NOTHING
+          RETURNING id`,
+          [
+            id, opp.source_type, opp.source_id, opp.source_url, opp.state, opp.county, jurisdictionKey,
+            opp.reported_amount, opp.owner_name, opp.owner_address, opp.holder_name, opp.property_description,
+            opp.parcel_number, opp.sale_date, opp.surplus_date, opp.deadline_date,
+            batchId,
+            JSON.stringify({
+              ...opp.raw_data,
+              triggered_by: triggeredBy ?? 'system',
+              scraper: scraper.name,
+            }),
+          ],
+        );
+
+        if (dbResult.rowCount && dbResult.rowCount > 0) {
+          inserted++;
+          await ingestionQueue.add('auto-enroll', { opportunityId: dbResult.rows[0].id });
+          jobsQueued++;
+        }
+      }
+    } catch (err) {
+      allErrors.push(`${scraper.name}: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      await scraper.dispose();
     }
   }
 
-  const duplicates = opportunityCount - inserted;
+  const duplicates = totalFound - inserted;
 
   console.log(
-    `[Ingestion] ${state} scrape complete: ${opportunityCount} found, ` +
-    `${inserted} new, ${duplicates} duplicates, ${jobsQueued} jobs queued (batch: ${batchId})`,
+    `[Ingestion] ${state} scrape complete: ${totalFound} found, ` +
+    `${inserted} new, ${duplicates} duplicates, ${jobsQueued} jobs queued (batch: ${batchId})` +
+    (allErrors.length ? ` — ${allErrors.length} errors` : ''),
   );
 
-  return { state, found: opportunityCount, inserted, duplicates, jobsQueued };
+  if (allErrors.length > 0) {
+    console.warn(`[Ingestion] ${state} errors:`, allErrors.slice(0, 5));
+  }
+
+  return { state, found: totalFound, inserted, duplicates, jobsQueued };
 }
 
 // ---------------------------------------------------------------------------
@@ -336,16 +179,20 @@ async function autoEnroll(job: Job): Promise<AutoEnrollResult> {
     };
   }
 
-  // 3. Look up or create claimant from owner_name
+  // 3. Look up or create claimant from owner_name (fuzzy match via pg_trgm)
   const ownerName = opp.owner_name ?? 'Unknown Owner';
   const nameParts = ownerName.trim().split(/\s+/);
   const firstName = nameParts[0] ?? 'Unknown';
   const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
 
-  // Try to find existing claimant by exact name match
-  const existingClaimant = await query<{ id: string }>(
-    `SELECT id FROM claimants WHERE first_name = $1 AND last_name = $2 LIMIT 1`,
-    [firstName, lastName],
+  const existingClaimant = await query<{ id: string; sim: number }>(
+    `SELECT id, similarity(first_name || ' ' || last_name, $1) AS sim
+     FROM claimants
+     WHERE similarity(first_name || ' ' || last_name, $1) > 0.4
+       AND do_not_contact = FALSE
+     ORDER BY sim DESC
+     LIMIT 1`,
+    [ownerName],
   );
 
   let claimantId: string;
