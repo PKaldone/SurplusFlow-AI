@@ -4,7 +4,6 @@
 // ============================================================
 
 import { Worker, Queue } from 'bullmq';
-import Redis from 'ioredis';
 import { QUEUES } from '@surplusflow/shared';
 import { processIngestion } from './processors/ingestion.js';
 import { processDocgen } from './processors/docgen.js';
@@ -13,7 +12,13 @@ import { processCompliance } from './processors/compliance.js';
 import { processFollowups } from './processors/followups.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://:sfredis_local_dev@localhost:6379';
-const connection = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
+const parsed = new URL(REDIS_URL);
+const connection = {
+  host: parsed.hostname,
+  port: parseInt(parsed.port || '6379', 10),
+  password: parsed.password || undefined,
+  maxRetriesPerRequest: null as null,
+};
 
 // --- Create Queues (for enqueuing from API) ---
 export const queues = {
@@ -87,6 +92,6 @@ console.log('SurplusFlow Worker started. Listening on queues:', Object.keys(queu
 process.on('SIGTERM', async () => {
   console.log('Shutting down workers...');
   await Promise.all(workers.map(w => w.close()));
-  await connection.quit();
+  await Promise.all(Object.values(queues).map(q => q.close()));
   process.exit(0);
 });
