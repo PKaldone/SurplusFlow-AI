@@ -10,7 +10,7 @@ export async function attorneyRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.requireRole(['attorney'])],
   }, async (request, reply) => {
     // Filter to attorney's own assignments
-    const attorneyId = request.user!.sub;
+    const _attorneyId = request.user!.sub;
     return reply.send({ data: [], total: 0 });
   });
 

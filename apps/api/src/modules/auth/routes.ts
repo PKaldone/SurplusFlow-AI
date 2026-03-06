@@ -112,7 +112,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   // POST /auth/mfa/verify — Verify TOTP
   app.post('/mfa/verify', { preHandler: [app.authenticate] }, async (request, reply) => {
-    const { code } = request.body as { code: string };
+    const { code: _code } = request.body as { code: string };
     // In production: verify TOTP code against stored secret
     await app.audit.write({
       actorId: request.user?.sub,

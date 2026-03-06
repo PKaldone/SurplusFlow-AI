@@ -9,7 +9,7 @@ export function errorHandler(error: FastifyError, request: FastifyRequest, reply
     err: error,
     url: request.url,
     method: request.method,
-    userId: (request as any).user?.sub,
+    userId: (request as unknown as { user?: { sub: string } }).user?.sub,
   });
 
   // Validation errors

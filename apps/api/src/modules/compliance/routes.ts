@@ -11,7 +11,7 @@ export async function complianceRoutes(app: FastifyInstance) {
   app.get('/', {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'compliance'])],
   }, async (request, reply) => {
-    const { state, sourceType, verificationStatus } = request.query as Record<string, string>;
+    const { state: _state, sourceType: _sourceType, verificationStatus: _verificationStatus } = request.query as Record<string, string>;
     return reply.send({ data: [], total: 0 });
   });
 

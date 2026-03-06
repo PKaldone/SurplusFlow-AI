@@ -42,7 +42,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get('/audit', {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'compliance'])],
   }, async (request, reply) => {
-    const { page, pageSize, action, resourceType, actorId, startDate, endDate } = request.query as Record<string, string>;
+    const { page: _page, pageSize: _pageSize, action: _action, resourceType: _resourceType, actorId: _actorId, startDate: _startDate, endDate: _endDate } = request.query as Record<string, string>;
     return reply.send({ data: [], total: 0 });
   });
 

@@ -3,13 +3,12 @@
 // ============================================================
 
 import { FastifyInstance } from 'fastify';
-import { AUDIT_ACTIONS } from '@surplusflow/shared';
 
 export async function opportunityRoutes(app: FastifyInstance) {
   app.get('/', {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops', 'compliance'])],
   }, async (request, reply) => {
-    const query = request.query as Record<string, string>;
+    const _query = request.query as Record<string, string>;
     return reply.send({ data: [], total: 0, page: 1, pageSize: 25, totalPages: 0 });
   });
 

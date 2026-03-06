@@ -3,7 +3,7 @@
 // Using simple runtime validation to avoid external dependency
 // ============================================================
 
-import { UserRoles, SourceTypes, CaseStatuses, OutreachChannels, VerificationStatuses } from '../types/index.js';
+import { SourceTypes, OutreachChannels, type SourceType, type OutreachChannel } from '../types/index.js';
 
 export function validateEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -50,7 +50,7 @@ export function validateCreateCase(input: Record<string, unknown>): ValidationRe
   if (!input.claimantId || !validateUUID(input.claimantId as string)) {
     errors.push('Valid claimantId (UUID) is required');
   }
-  if (!input.sourceType || !SourceTypes.includes(input.sourceType as any)) {
+  if (!input.sourceType || !SourceTypes.includes(input.sourceType as SourceType)) {
     errors.push(`sourceType must be one of: ${SourceTypes.join(', ')}`);
   }
   if (!input.jurisdictionKey || !validateJurisdictionKey(input.jurisdictionKey as string)) {
@@ -88,7 +88,7 @@ export function validateCreateClaimant(input: Record<string, unknown>): Validati
 export function validateRuleEvalInput(input: Record<string, unknown>): ValidationResult {
   const errors: string[] = [];
 
-  if (!input.sourceType || !SourceTypes.includes(input.sourceType as any)) {
+  if (!input.sourceType || !SourceTypes.includes(input.sourceType as SourceType)) {
     errors.push(`sourceType must be one of: ${SourceTypes.join(', ')}`);
   }
   if (!input.jurisdictionKey || !validateJurisdictionKey(input.jurisdictionKey as string)) {
@@ -110,10 +110,10 @@ export function validateOutreachCampaign(input: Record<string, unknown>): Valida
   if (!input.name || typeof input.name !== 'string') {
     errors.push('Campaign name is required');
   }
-  if (!input.sourceType || !SourceTypes.includes(input.sourceType as any)) {
+  if (!input.sourceType || !SourceTypes.includes(input.sourceType as SourceType)) {
     errors.push(`sourceType must be one of: ${SourceTypes.join(', ')}`);
   }
-  if (!input.channel || !OutreachChannels.includes(input.channel as any)) {
+  if (!input.channel || !OutreachChannels.includes(input.channel as OutreachChannel)) {
     errors.push(`channel must be one of: ${OutreachChannels.join(', ')}`);
   }
   if (!input.templateKey || typeof input.templateKey !== 'string') {

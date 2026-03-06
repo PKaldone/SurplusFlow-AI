@@ -4,7 +4,7 @@
 
 import { FastifyInstance } from 'fastify';
 import { AUDIT_ACTIONS } from '@surplusflow/shared';
-import { evaluateStopRules, validateApproval } from '@surplusflow/contracts/src/outreach.js';
+import { validateApproval } from '@surplusflow/contracts/src/outreach.js';
 
 export async function outreachRoutes(app: FastifyInstance) {
   app.get('/campaigns', {
@@ -27,7 +27,7 @@ export async function outreachRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'compliance'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const payload = request.body as any;
+    const payload = request.body as Record<string, unknown>;
     payload.campaignId = id;
     payload.approvedBy = request.user!.sub;
 

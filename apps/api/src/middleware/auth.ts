@@ -81,7 +81,7 @@ async function authPluginImpl(app: FastifyInstance) {
   /**
    * Claimant self-access guard — ensures claimant can only access their own resources
    */
-  app.decorate('requireSelfOrRole', function (roles: UserRole[], paramIdField: string = 'id') {
+  app.decorate('requireSelfOrRole', function (roles: UserRole[], _paramIdField: string = 'id') {
     return async function (request: FastifyRequest, reply: FastifyReply) {
       if (!request.user) {
         return reply.status(401).send({ statusCode: 401, error: 'Unauthorized', message: 'Not authenticated' });
@@ -91,7 +91,7 @@ async function authPluginImpl(app: FastifyInstance) {
 
       // Claimant can only access their own resources
       if (request.user.role === 'claimant') {
-        const params = request.params as Record<string, string>;
+        const _params = request.params as Record<string, string>;
         // This will be checked at the route level against the claimant's own records
         // The route handler must verify ownership
         return;

@@ -12,8 +12,8 @@ export async function documentRoutes(app: FastifyInstance) {
     const data = await request.file();
     if (!data) return reply.status(400).send({ message: 'No file uploaded' });
 
-    const { caseId, docType, docCategory } = data.fields as unknown as Record<string, { value: string }>;
-    const isSensitive = SENSITIVE_DOC_TYPES.includes(docType?.value as any);
+    const { caseId, docType, docCategory: _docCategory } = data.fields as unknown as Record<string, { value: string }>;
+    const isSensitive = SENSITIVE_DOC_TYPES.includes(docType?.value as (typeof SENSITIVE_DOC_TYPES)[number]);
     const bucket = isSensitive ? STORAGE_BUCKETS.SENSITIVE : STORAGE_BUCKETS.DOCUMENTS;
 
     // In production:

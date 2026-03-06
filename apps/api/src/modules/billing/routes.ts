@@ -10,7 +10,7 @@ export async function billingRoutes(app: FastifyInstance) {
   app.get('/invoices', {
     preHandler: [app.authenticate, app.requireSelfOrRole(['super_admin', 'admin'])],
   }, async (request, reply) => {
-    const query = request.query as Record<string, string>;
+    const _query = request.query as Record<string, string>;
     // Claimant role: filter to own invoices only
     return reply.send({ data: [], total: 0, page: 1, pageSize: 25, totalPages: 0 });
   });

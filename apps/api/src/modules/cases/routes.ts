@@ -10,7 +10,7 @@ export async function caseRoutes(app: FastifyInstance) {
   app.get('/', {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops', 'compliance'])],
   }, async (request, reply) => {
-    const { page = 1, pageSize = 25, status, jurisdictionKey, assignedTo, state } = request.query as Record<string, string>;
+    const { page = 1, pageSize = 25, status: _status, jurisdictionKey: _jurisdictionKey, assignedTo: _assignedTo, state: _state } = request.query as Record<string, string>;
     return reply.send({ data: [], total: 0, page: Number(page), pageSize: Number(pageSize), totalPages: 0 });
   });
 
