@@ -264,24 +264,12 @@ async function scrapeStateSurplus(job: Job): Promise<ScrapeResult> {
       inserted++;
       const insertedId = result.rows[0].id;
 
-      // Queue compliance rule-check and auto-enroll for each new opportunity
-      await complianceQueue.add('compliance:rule-check', {
-        type: 'rule-check',
-        data: {
-          opportunityId: insertedId,
-          jurisdictionKey: opp.jurisdiction_key,
-          sourceType: opp.source_type,
-          state: opp.state,
-          county: opp.county,
-        },
-      });
-
+      // Queue auto-enroll (compliance check happens after case is created)
       await ingestionQueue.add('auto-enroll', {
-        type: 'auto-enroll',
-        data: { opportunityId: insertedId },
+        opportunityId: insertedId,
       });
 
-      jobsQueued += 2;
+      jobsQueued += 1;
     }
   }
 
@@ -379,10 +367,10 @@ async function autoEnroll(job: Job): Promise<AutoEnrollResult> {
   const year = new Date().getFullYear();
   const prefix = `${CASE_NUMBER_PREFIX}-${year}-`;
   const countResult = await query<{ count: string }>(
-    `SELECT COUNT(*) as count FROM claim_cases WHERE case_number LIKE $1`,
+    `SELECT MAX(CAST(SUBSTRING(case_number FROM '[0-9]+$') AS INTEGER)) AS max_seq FROM claim_cases WHERE case_number LIKE $1`,
     [`${prefix}%`],
   );
-  const nextSeq = parseInt(countResult.rows[0].count, 10) + 1;
+  const nextSeq = (parseInt(countResult.rows[0].max_seq, 10) || 0) + 1;
   const caseNumber = `${prefix}${String(nextSeq).padStart(4, '0')}`;
 
   // 5. Insert into claim_cases
