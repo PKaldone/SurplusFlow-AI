@@ -66,7 +66,7 @@ export default function MyCasesPage() {
               <div>
                 <p className="font-medium text-lg">No active cases</p>
                 <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-                  You don't have any active cases. If you've been contacted about a
+                  You don&apos;t have any active cases. If you&apos;ve been contacted about a
                   surplus recovery, please check your email for a login link.
                 </p>
               </div>

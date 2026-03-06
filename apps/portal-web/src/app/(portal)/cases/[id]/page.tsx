@@ -390,7 +390,7 @@ export default function CaseDetailPage() {
         <CardContent>
           {documents.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No documents uploaded yet. Click "Upload Documents" to get started.
+              No documents uploaded yet. Click &quot;Upload Documents&quot; to get started.
             </p>
           ) : (
             <div className="space-y-3">

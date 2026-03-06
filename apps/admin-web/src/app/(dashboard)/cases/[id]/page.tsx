@@ -17,7 +17,6 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
 import { LoadingPage } from '@/components/loading';
 import { Button } from '@/components/ui/button';

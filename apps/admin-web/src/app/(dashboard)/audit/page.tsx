@@ -102,7 +102,7 @@ export default function AuditPage() {
   const [page, setPage] = useState(1);
   const LIMIT = 25;
 
-  const { entries, total, isLoading, mutate } = useAuditLog({
+  const { entries, total, isLoading } = useAuditLog({
     eventType: eventType || undefined,
     entityType: entityType.trim() || undefined,
     actorId: actorId.trim() || undefined,
