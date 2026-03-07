@@ -72,52 +72,124 @@ export async function caseRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const body = request.body as Record<string, unknown>;
 
-    // Generate case number: SF-YYYY-NNNN
-    const year = new Date().getFullYear();
-    const countResult = await query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM claim_cases WHERE case_number LIKE $1`,
-      [`${CASE_NUMBER_PREFIX}-${year}-%`],
-    );
-    const seq = parseInt(countResult.rows[0].count, 10) + 1;
-    const caseNumber = `${CASE_NUMBER_PREFIX}-${year}-${String(seq).padStart(4, '0')}`;
+    // Accept both camelCase (frontend) and snake_case field names
+    const opportunityId = (body.opportunityId ?? body.opportunity_id) as string | undefined;
 
-    const result = await query(
-      `INSERT INTO claim_cases (
-        case_number, opportunity_id, claimant_id, assigned_to, attorney_id,
-        status, source_type, jurisdiction_key, state, county,
-        claimed_amount, agreed_fee_pct, agreed_fee_cap, contract_version,
-        cooling_off_days, attorney_required, notarization_required, assignment_enabled,
-        notes, metadata
-      ) VALUES (
-        $1, $2, $3, $4, $5,
-        $6, $7, $8, $9, $10,
-        $11, $12, $13, $14,
-        $15, $16, $17, $18,
-        $19, $20
-      ) RETURNING *`,
-      [
-        caseNumber,
-        body.opportunity_id,
-        body.claimant_id,
-        body.assigned_to ?? null,
-        body.attorney_id ?? null,
-        body.status ?? 'PROSPECT',
-        body.source_type,
-        body.jurisdiction_key,
-        body.state,
-        body.county ?? null,
-        body.claimed_amount ?? null,
-        body.agreed_fee_pct ?? null,
-        body.agreed_fee_cap ?? null,
-        body.contract_version ?? null,
-        body.cooling_off_days ?? null,
-        body.attorney_required ?? false,
-        body.notarization_required ?? false,
-        body.assignment_enabled ?? false,
-        body.notes ?? null,
-        body.metadata ? JSON.stringify(body.metadata) : '{}',
-      ],
+    if (!opportunityId) {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: 'opportunityId is required' });
+    }
+
+    // Fetch opportunity to auto-fill case fields
+    const oppResult = await query(
+      `SELECT * FROM opportunities WHERE id = $1`,
+      [opportunityId],
     );
+    if (oppResult.rows.length === 0) {
+      return reply.status(404).send({ statusCode: 404, error: 'Not Found', message: 'Opportunity not found' });
+    }
+    const opp = oppResult.rows[0] as Record<string, unknown>;
+
+    // Look up or create claimant from opportunity owner_name
+    let claimantId = (body.claimantId ?? body.claimant_id) as string | undefined;
+    if (!claimantId) {
+      const ownerName = (opp.owner_name as string) ?? 'Unknown Owner';
+      const nameParts = ownerName.trim().split(/\s+/);
+      const firstName = nameParts[0] ?? 'Unknown';
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Unknown';
+
+      // Check for existing claimant by name similarity
+      const existing = await query<{ id: string }>(
+        `SELECT id FROM claimants
+         WHERE similarity(first_name || ' ' || last_name, $1) > 0.4
+         ORDER BY similarity(first_name || ' ' || last_name, $1) DESC LIMIT 1`,
+        [ownerName],
+      );
+
+      if (existing.rows.length > 0) {
+        claimantId = existing.rows[0].id;
+      } else {
+        const newId = crypto.randomUUID();
+        await query(
+          `INSERT INTO claimants (id, first_name, last_name, address_line1, city, state, zip, identity_verified, do_not_contact, created_at, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, false, false, NOW(), NOW())`,
+          [newId, firstName, lastName, null, null, opp.state, null],
+        );
+        claimantId = newId;
+      }
+    }
+
+    const jurisdictionKey = (opp.jurisdiction_key as string) ??
+      `${(opp.state as string || '').toLowerCase()}_statewide_${opp.source_type}`;
+
+    // Generate case number with advisory lock to prevent race conditions
+    const year = new Date().getFullYear();
+    const prefix = `${CASE_NUMBER_PREFIX}-${year}-`;
+
+    const client = await (await import('../../lib/db.js')).pool.connect();
+    let caseNumber: string;
+    let result;
+    try {
+      await client.query('BEGIN');
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext('case_number_gen'))`);
+
+      const countResult = await client.query<{ max_seq: string }>(
+        `SELECT MAX(CAST(SUBSTRING(case_number FROM '[0-9]+$') AS INTEGER)) AS max_seq FROM claim_cases WHERE case_number LIKE $1`,
+        [`${prefix}%`],
+      );
+      const nextSeq = (parseInt(countResult.rows[0].max_seq, 10) || 0) + 1;
+      caseNumber = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+
+      result = await client.query(
+        `INSERT INTO claim_cases (
+          case_number, opportunity_id, claimant_id, assigned_to, attorney_id,
+          status, source_type, jurisdiction_key, state, county,
+          claimed_amount, agreed_fee_pct, agreed_fee_cap, contract_version,
+          cooling_off_days, attorney_required, notarization_required, assignment_enabled,
+          notes, metadata
+        ) VALUES (
+          $1, $2, $3, $4, $5,
+          $6, $7, $8, $9, $10,
+          $11, $12, $13, $14,
+          $15, $16, $17, $18,
+          $19, $20
+        ) RETURNING *`,
+        [
+          caseNumber,
+          opportunityId,
+          claimantId,
+          body.assignedOpsId ?? body.assigned_to ?? null,
+          body.attorney_id ?? null,
+          'PROSPECT',
+          opp.source_type,
+          jurisdictionKey,
+          opp.state,
+          opp.county ?? null,
+          opp.reported_amount ?? null,
+          body.configuredFeePercent ?? body.agreed_fee_pct ?? null,
+          body.configuredFeeCap ?? body.agreed_fee_cap ?? null,
+          body.contract_version ?? null,
+          body.cooling_off_days ?? null,
+          false,
+          false,
+          false,
+          body.notes ?? null,
+          JSON.stringify({ converted_from_opportunity: true, converted_at: new Date().toISOString() }),
+        ],
+      );
+
+      // Update opportunity status
+      await client.query(
+        `UPDATE opportunities SET status = 'case_created', updated_at = NOW() WHERE id = $1`,
+        [opportunityId],
+      );
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
 
     await request.logAudit({
       action: AUDIT_ACTIONS.CASE_CREATED,
