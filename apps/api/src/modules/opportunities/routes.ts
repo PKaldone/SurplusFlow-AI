@@ -161,12 +161,12 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
     // Fetch enrichment audit entries
     const enrichmentResult = await query(
-      `SELECT action, details, created_at
+      `SELECT action, details, timestamp
        FROM audit_log
        WHERE resource_type = 'claimant'
          AND action LIKE 'claimant.email%'
          AND case_id IN (SELECT id FROM claim_cases WHERE opportunity_id = $1)
-       ORDER BY created_at DESC
+       ORDER BY timestamp DESC
        LIMIT 10`,
       [id],
     );
@@ -174,7 +174,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
     const enrichmentHistory = enrichmentResult.rows.map((r: Record<string, unknown>) => ({
       action: r.action,
       details: r.details,
-      createdAt: r.created_at,
+      createdAt: r.timestamp,
     }));
 
     return reply.send({
