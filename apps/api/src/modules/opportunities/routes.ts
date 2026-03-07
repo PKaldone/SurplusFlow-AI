@@ -17,30 +17,61 @@ const ingestionQueue = new Queue('ingestion', {
   },
 });
 
+function mapOpportunityRow(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    sourceType: row.source_type,
+    sourceRef: row.source_id,
+    sourceUrl: row.source_url,
+    jurisdictionState: row.state,
+    jurisdictionCounty: row.county,
+    ownerName: row.owner_name,
+    ownerAddress: row.owner_address,
+    holderName: row.holder_name,
+    propertyDescription: row.property_description,
+    estimatedAmount: row.reported_amount ? Number(row.reported_amount) : null,
+    parcelNumber: row.parcel_number,
+    saleDate: row.sale_date,
+    surplusDate: row.surplus_date,
+    deadlineDate: row.deadline_date,
+    status: row.status,
+    ingestedAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export async function opportunityRoutes(app: FastifyInstance) {
   app.get('/', {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops', 'compliance'])],
   }, async (request, reply) => {
-    const { page = '1', pageSize = '25', status, state, sourceType } = request.query as Record<string, string>;
-    const pageNum = Math.max(1, Number(page));
-    const size = Math.min(100, Math.max(1, Number(pageSize)));
+    const qs = request.query as Record<string, string>;
+    const pageNum = Math.max(1, Number(qs.page || '1'));
+    const size = Math.min(100, Math.max(1, Number(qs.limit || qs.pageSize || '25')));
     const offset = (pageNum - 1) * size;
 
     const conditions: string[] = [];
     const params: unknown[] = [];
     let paramIdx = 1;
 
-    if (status) {
+    if (qs.status) {
       conditions.push(`status = $${paramIdx++}`);
-      params.push(status);
+      params.push(qs.status);
     }
-    if (state) {
+    if (qs.state) {
       conditions.push(`state = $${paramIdx++}`);
-      params.push(state);
+      params.push(qs.state);
     }
-    if (sourceType) {
+    if (qs.sourceType) {
       conditions.push(`source_type = $${paramIdx++}`);
-      params.push(sourceType);
+      params.push(qs.sourceType);
+    }
+    if (qs.minAmount) {
+      conditions.push(`reported_amount >= $${paramIdx++}`);
+      params.push(Number(qs.minAmount));
+    }
+    if (qs.maxAmount) {
+      conditions.push(`reported_amount <= $${paramIdx++}`);
+      params.push(Number(qs.maxAmount));
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -56,11 +87,13 @@ export async function opportunityRoutes(app: FastifyInstance) {
       [...params, size, offset],
     );
 
+    const data = dataResult.rows.map(mapOpportunityRow);
+
     return reply.send({
-      data: dataResult.rows,
+      data,
       total,
       page: pageNum,
-      pageSize: size,
+      limit: size,
       totalPages: Math.ceil(total / size),
     });
   });
@@ -76,7 +109,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
       return reply.status(404).send({ statusCode: 404, error: 'Not Found', message: 'Opportunity not found' });
     }
 
-    return reply.send(result.rows[0]);
+    return reply.send(mapOpportunityRow(result.rows[0] as Record<string, unknown>));
   });
 
   app.post('/import', {
