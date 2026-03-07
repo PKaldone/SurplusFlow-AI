@@ -125,9 +125,8 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-SurplusFlow <onboarding@resend.dev>}
       LOB_API_KEY: ${LOB_API_KEY:-}
-      HUNTER_API_KEY: ${HUNTER_API_KEY:-}
-      GOOGLE_CSE_KEY: ${GOOGLE_CSE_KEY:-}
-      GOOGLE_CSE_ID: ${GOOGLE_CSE_ID:-}
+      PIPL_API_KEY: ${PIPL_API_KEY:-}
+      BEENVERIFIED_API_KEY: ${BEENVERIFIED_API_KEY:-}
     restart: unless-stopped
 
   admin-web:
