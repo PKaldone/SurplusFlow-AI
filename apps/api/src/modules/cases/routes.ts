@@ -278,7 +278,7 @@ export async function caseRoutes(app: FastifyInstance) {
     preHandler: [app.authenticate, app.requireRole(['super_admin', 'admin', 'ops'])],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const { docType, filename, mimeType, fileBase64 } = request.body as {
+    const { docType, filename, mimeType, fileBase64: _fileBase64 } = request.body as {
       docType: string;
       filename: string;
       mimeType: string;

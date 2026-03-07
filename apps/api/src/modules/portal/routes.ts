@@ -2,7 +2,7 @@
 // SurplusFlow AI — Portal Routes (Claimant-facing)
 // ============================================================
 
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { query } from '../../lib/db.js';
 
 /**
@@ -22,7 +22,7 @@ async function resolveClaimantId(userSub: string): Promise<string | null> {
  * onto the request. Returns 403 for non-claimants and 404 if the user
  * has no claimant record.
  */
-async function requireClaimant(request: any, reply: any): Promise<void> {
+async function requireClaimant(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   if (request.user?.role !== 'claimant') {
     return reply.status(403).send({
       statusCode: 403,
@@ -39,7 +39,7 @@ async function requireClaimant(request: any, reply: any): Promise<void> {
     });
   }
   // Stash for downstream handlers
-  (request as any).claimantId = claimantId;
+  (request as unknown as { claimantId: string }).claimantId = claimantId;
 }
 
 export async function portalRoutes(app: FastifyInstance) {
@@ -52,7 +52,7 @@ export async function portalRoutes(app: FastifyInstance) {
     await requireClaimant(request, reply);
     if (reply.sent) return;
 
-    const claimantId = (request as any).claimantId as string;
+    const claimantId = (request as unknown as { claimantId: string }).claimantId;
     const { page: rawPage, pageSize: rawPageSize, status } = request.query as Record<string, string>;
     const page = Math.max(1, parseInt(rawPage, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(rawPageSize, 10) || 25));
@@ -106,7 +106,7 @@ export async function portalRoutes(app: FastifyInstance) {
     await requireClaimant(request, reply);
     if (reply.sent) return;
 
-    const claimantId = (request as any).claimantId as string;
+    const claimantId = (request as unknown as { claimantId: string }).claimantId;
     const { id } = request.params as { id: string };
 
     const result = await query(
@@ -140,7 +140,7 @@ export async function portalRoutes(app: FastifyInstance) {
     await requireClaimant(request, reply);
     if (reply.sent) return;
 
-    const claimantId = (request as any).claimantId as string;
+    const claimantId = (request as unknown as { claimantId: string }).claimantId;
     const { id } = request.params as { id: string };
 
     // Verify case belongs to this claimant
@@ -178,7 +178,7 @@ export async function portalRoutes(app: FastifyInstance) {
     await requireClaimant(request, reply);
     if (reply.sent) return;
 
-    const claimantId = (request as any).claimantId as string;
+    const claimantId = (request as unknown as { claimantId: string }).claimantId;
     const { page: rawPage, pageSize: rawPageSize, status } = request.query as Record<string, string>;
     const page = Math.max(1, parseInt(rawPage, 10) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(rawPageSize, 10) || 25));
@@ -232,7 +232,7 @@ export async function portalRoutes(app: FastifyInstance) {
     await requireClaimant(request, reply);
     if (reply.sent) return;
 
-    const claimantId = (request as any).claimantId as string;
+    const claimantId = (request as unknown as { claimantId: string }).claimantId;
     const { id } = request.params as { id: string };
 
     // Verify case belongs to this claimant
@@ -293,7 +293,7 @@ export async function portalRoutes(app: FastifyInstance) {
     await requireClaimant(request, reply);
     if (reply.sent) return;
 
-    const claimantId = (request as any).claimantId as string;
+    const claimantId = (request as unknown as { claimantId: string }).claimantId;
     const { id } = request.params as { id: string };
 
     // Verify case belongs to this claimant
@@ -366,7 +366,7 @@ export async function portalRoutes(app: FastifyInstance) {
     await requireClaimant(request, reply);
     if (reply.sent) return;
 
-    const claimantId = (request as any).claimantId as string;
+    const claimantId = (request as unknown as { claimantId: string }).claimantId;
     const { id } = request.params as { id: string };
 
     // Verify case belongs to this claimant and check cooling-off eligibility
