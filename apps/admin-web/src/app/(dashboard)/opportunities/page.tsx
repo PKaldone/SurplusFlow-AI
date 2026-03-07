@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Upload, Zap } from 'lucide-react';
 
 import { PageHeader } from '@/components/page-header';
@@ -46,6 +47,7 @@ function formatDate(dateStr: string | undefined | null): string {
 }
 
 export default function OpportunitiesPage() {
+  const router = useRouter();
   const [stateFilter, setStateFilter] = useState('all');
   const [sourceTypeFilter, setSourceTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -233,6 +235,7 @@ export default function OpportunitiesPage() {
         page={page}
         limit={LIMIT}
         onPageChange={setPage}
+        onRowClick={(row) => router.push(`/opportunities/${row.id}`)}
         loading={isLoading}
         emptyMessage="No opportunities found."
       />

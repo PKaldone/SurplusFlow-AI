@@ -29,10 +29,67 @@ export interface Opportunity {
   estimatedAmount: number;
   sourceUrl?: string;
   sourceRef?: string;
+  holderName?: string;
+  parcelNumber?: string;
+  saleDate?: string;
+  surplusDate?: string;
+  deadlineDate?: string;
   status: string;
   ingestedAt: string;
-  expiresAt?: string;
+  updatedAt?: string;
+  rawData?: Record<string, unknown> | null;
+  relatedCases?: RelatedCase[];
+  outreachHistory?: OutreachRecord[];
+  enrichmentHistory?: EnrichmentEntry[];
   [key: string]: unknown;
+}
+
+export interface RelatedCase {
+  id: string;
+  caseNumber: string;
+  status: string;
+  claimedAmount: number | null;
+  createdAt: string;
+  claimantName: string | null;
+  claimantEmail: string | null;
+  claimantPhone: string | null;
+}
+
+export interface OutreachRecord {
+  id: string;
+  channel: string;
+  templateKey: string;
+  touchNumber: number;
+  status: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  openedAt?: string;
+  respondedAt?: string;
+  stopReason?: string;
+}
+
+export interface EnrichmentEntry {
+  action: string;
+  details: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface RuleCheckSignal {
+  type: string;
+  label: string;
+  detail: string;
+  severity: 'ok' | 'info' | 'warning' | 'critical';
+}
+
+export interface RuleCheckResult {
+  id: string;
+  ruleCheck: {
+    result: string;
+    constraints: string[];
+    warnings: string[];
+  };
+  signals: RuleCheckSignal[];
+  duplicateCount: number;
 }
 
 interface OpportunityFilters {
@@ -77,8 +134,15 @@ export function useOpportunities(filters: OpportunityFilters = {}) {
 }
 
 export function useOpportunity(id: string) {
-  const { data, error, isLoading } = useSWR<Opportunity>(
+  const { data, error, isLoading, mutate } = useSWR<Opportunity>(
     id ? `/api/v1/opportunities/${id}` : null,
   );
-  return { opportunity: data, error, isLoading };
+  return { opportunity: data, error, isLoading, mutate };
+}
+
+export function useRuleCheck(id: string | null) {
+  const { data, error, isLoading, mutate } = useSWR<RuleCheckResult>(
+    id ? `/api/v1/opportunities/${id}/rule-check` : null,
+  );
+  return { ruleCheck: data, error, isLoading, mutate };
 }
