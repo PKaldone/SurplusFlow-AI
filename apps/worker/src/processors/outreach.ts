@@ -12,6 +12,7 @@ import type { OutreachChannel } from '@surplusflow/shared';
 import { sendEmail, isEmailConfigured } from '../lib/email.js';
 import { sendLetter, isMailConfigured } from '../lib/mail.js';
 import { getEmailSubject, getEmailHtml, getEmailText } from '../templates/outreach-email.js';
+import { getLetterHtml } from '../templates/outreach-letter.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://:sfredis_local_dev@localhost:6379';
 const parsed = new URL(REDIS_URL);
@@ -279,9 +280,9 @@ async function handleGenerateOutreach(
   // 5. Send email if channel is email and claimant has an email address
   if ((channel === 'email' || channel === 'mail') && caseRow.email && isEmailConfigured()) {
     try {
-      const subject = getEmailSubject(touchNumber, mergeData as Parameters<typeof getEmailSubject>[1]);
-      const html = getEmailHtml(touchNumber, mergeData as Parameters<typeof getEmailHtml>[1]);
-      const text = getEmailText(touchNumber, mergeData as Parameters<typeof getEmailText>[1]);
+      const subject = getEmailSubject(touchNumber, mergeData as unknown as Parameters<typeof getEmailSubject>[1]);
+      const html = getEmailHtml(touchNumber, mergeData as unknown as Parameters<typeof getEmailHtml>[1]);
+      const text = getEmailText(touchNumber, mergeData as unknown as Parameters<typeof getEmailText>[1]);
 
       const result = await sendEmail({
         to: caseRow.email,
@@ -316,6 +317,52 @@ async function handleGenerateOutreach(
         [outreachRecordId, `Email error: ${errMsg}`],
       );
       console.error(`[Outreach] Email error for case ${caseRow.case_number}: ${errMsg}`);
+    }
+  }
+
+  // 5b. Send physical letter if channel is mail, claimant has address, and Lob is configured
+  if (channel === 'mail' && caseRow.address_line1 && caseRow.claimant_state && caseRow.zip && isMailConfigured()) {
+    try {
+      const letterHtml = getLetterHtml(touchNumber, mergeData as unknown as Parameters<typeof getLetterHtml>[1]);
+
+      const result = await sendLetter({
+        to: {
+          name: `${caseRow.first_name} ${caseRow.last_name}`,
+          address_line1: caseRow.address_line1,
+          address_line2: caseRow.address_line2 ?? undefined,
+          address_city: caseRow.city ?? '',
+          address_state: caseRow.claimant_state,
+          address_zip: caseRow.zip,
+        },
+        html: letterHtml,
+        description: `SurplusFlow Outreach Touch ${touchNumber} — Case ${caseRow.case_number}`,
+        metadata: {
+          case_number: caseRow.case_number,
+          touch_number: String(touchNumber),
+          case_id: caseId,
+        },
+      });
+
+      if (result.success) {
+        await query(
+          `UPDATE outreach_records SET status = 'sent', sent_at = NOW(), external_id = $2 WHERE id = $1`,
+          [outreachRecordId, result.id],
+        );
+        console.log(`[Outreach] Letter sent for case ${caseRow.case_number} (lob:${result.id}, ETA: ${result.expectedDelivery})`);
+      } else {
+        await query(
+          `UPDATE outreach_records SET status = 'failed', stop_reason = $2 WHERE id = $1`,
+          [outreachRecordId, `Letter send failed: ${result.error}`],
+        );
+        console.error(`[Outreach] Letter failed for case ${caseRow.case_number}: ${result.error}`);
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      await query(
+        `UPDATE outreach_records SET status = 'failed', stop_reason = $2 WHERE id = $1`,
+        [outreachRecordId, `Letter error: ${errMsg}`],
+      );
+      console.error(`[Outreach] Letter error for case ${caseRow.case_number}: ${errMsg}`);
     }
   }
 
