@@ -11,6 +11,7 @@ import { processOutreach } from './processors/outreach.js';
 import { processCompliance } from './processors/compliance.js';
 import { processFollowups } from './processors/followups.js';
 import { processMatching } from './processors/matching.js';
+import { processEnrichment } from './processors/enrichment.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://:sfredis_local_dev@localhost:6379';
 const parsed = new URL(REDIS_URL);
@@ -64,8 +65,15 @@ const matchingWorker = new Worker(QUEUES.MATCHING, processMatching, {
   removeOnComplete: { count: 100 },
 });
 
+const enrichmentWorker = new Worker('enrichment', processEnrichment, {
+  connection, concurrency: 2,
+  removeOnComplete: { count: 100 },
+});
+
 // --- Event Logging ---
-const workers = [ingestionWorker, docgenWorker, outreachWorker, complianceWorker, followupsWorker, matchingWorker];
+const enrichmentQueue = new Queue('enrichment', { connection });
+
+const workers = [ingestionWorker, docgenWorker, outreachWorker, complianceWorker, followupsWorker, matchingWorker, enrichmentWorker];
 
 workers.forEach(worker => {
   worker.on('completed', (job) => {
@@ -112,6 +120,12 @@ queues[QUEUES.INGESTION].add('scrape-state-surplus', { state: 'OH', automated: t
 queues[QUEUES.INGESTION].add('scrape-state-surplus', { state: 'NY', automated: true }, {
   repeat: { pattern: '20 6 * * *' },
   jobId: 'auto-scrape-NY',
+});
+
+// Email enrichment: runs every 4 hours — find emails for claimants
+enrichmentQueue.add('batch-enrich', {}, {
+  repeat: { pattern: '30 */4 * * *' },
+  jobId: 'auto-enrichment',
 });
 
 // Auto-compliance: runs every 2 hours — check new prospects

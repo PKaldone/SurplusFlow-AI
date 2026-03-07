@@ -10,6 +10,7 @@ import type { OutreachContext } from '@surplusflow/contracts/src/outreach.js';
 import { QUEUES, AUDIT_ACTIONS, COMPANY } from '@surplusflow/shared';
 import type { OutreachChannel } from '@surplusflow/shared';
 import { sendEmail, isEmailConfigured } from '../lib/email.js';
+import { sendLetter, isMailConfigured } from '../lib/mail.js';
 import { getEmailSubject, getEmailHtml, getEmailText } from '../templates/outreach-email.js';
 
 const REDIS_URL = process.env.REDIS_URL || 'redis://:sfredis_local_dev@localhost:6379';
