@@ -360,7 +360,7 @@ function OutreachTab({ opportunity }: { opportunity: Opportunity }) {
                 <StatusBadge status={r.status} />
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {r.templateKey.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                {(r.templateKey || '').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
               </p>
             </div>
           </div>
@@ -394,7 +394,7 @@ function EnrichmentTab({ opportunity }: { opportunity: Opportunity }) {
   return (
     <div className="space-y-3">
       {entries.map((e, i) => {
-        const details = (typeof e.details === 'string' ? JSON.parse(e.details) : e.details) as Record<string, unknown>;
+        const details = (typeof e.details === 'string' ? JSON.parse(e.details) : e.details || {}) as Record<string, unknown>;
         return (
           <div key={i} className="flex items-start gap-3 rounded-lg border p-3">
             <div className="rounded-full bg-green-50 p-2 mt-0.5">
